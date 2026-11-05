@@ -73,6 +73,7 @@ function clean(p) {
     e: p.e ? str(p.e, 8) : null, et: num(p.et, 1e15), s: str(p.s, 40), st: num(p.st, 1e15), f: num(p.f, 1e15),
     j: num(p.j, 6), // 점프하거나 의자에 앉아 땅에서 떠 있는 높이
     hr: num(p.hr, 9) | 0, bd: num(p.bd, 9) | 0, // 헤어, 수염
+    fi: num(p.fi, 30) | 0, // 마지막으로 불 피운 모닥불 번호
     ...(typeof p.bx === "number" && typeof p.bz === "number" ? { bx: num(p.bx, 300), bz: num(p.bz, 300) } : {}), // 낚시찌 위치
   };
 }

@@ -101,7 +101,7 @@ body.touch .emo span{font-size:1.2rem}
 body.touch .emo small{display:none}
 body.touch #prompt{left:calc(50vw + 20px);bottom:calc(var(--sb) + 40px);font-size:1rem;padding:5px 12px;white-space:normal;text-align:center;max-width:calc(100vw - 260px);line-height:1.2}
 body.touch #prompt kbd{display:none}
-body.touch #chatForm{top:calc(var(--st) + 130px);bottom:auto;width:min(340px,calc(100% - 24px));padding:3px;gap:4px;left:50%}
+body.touch #chatForm{top:calc(var(--st) + 130px);bottom:auto;left:calc(var(--sl) + 66px);right:calc(var(--sr) + 4px);width:auto;max-width:320px;margin-left:auto;transform:none;padding:3px;gap:4px}
 body.touch #chatIn{font-size:16px;padding:3px 8px}
 body.touch #chatForm .btn{font-size:.9rem!important;padding:1px 8px!important;box-shadow:2px 2px 0 var(--ink)}
 body.touch #toast{top:calc(var(--st) + 62px);font-size:1.1rem}
@@ -213,7 +213,17 @@ const touch=('ontouchstart' in window)||matchMedia('(pointer:coarse)').matches;
 if(touch)document.body.classList.add("touch");
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/* freshwater pond in the middle of the island: a bowl carved into the ground with its own water level */
+const POND={x:-22,z:-16,r:9};
 function groundH(x,z){
+  const d=Math.hypot(x-POND.x,z-POND.z);
+  if(d>POND.r+4)return rawH(x,z);
+  const rim=POND.y+.35;
+  if(d<POND.r)return POND.y-(.3+1.7*(1-(d/POND.r)**2));
+  const k=(d-POND.r)/4,s=k*k*(3-2*k);return rim+(rawH(x,z)-rim)*s;
+}
+function inPond(x,z,pad){return Math.hypot(x-POND.x,z-POND.z)<POND.r+(pad||0)}
+function rawH(x,z){
   const r=Math.hypot(x,z),ang=Math.atan2(z,x);
   const RR=R*(1+.12*Math.sin(ang*3+1)+.07*Math.sin(ang*5+2)+.03*Math.sin(ang*11));
   const t=1-(r/RR)*(r/RR);
@@ -224,7 +234,8 @@ function groundH(x,z){
   h+=3.5*Math.exp(-((x+46)**2+(z-6)**2)/450)*inland;  // small hill, west
   return h-.6;
 }
-function rAt(a,h){let r=0;while(r<R*1.4&&groundH(Math.cos(a)*r,Math.sin(a)*r)>h)r+=.3;return r}
+POND.y=rawH(POND.x,POND.z)-.25;
+function rAt(a,h){let r=0;while(r<R*1.4){const x=Math.cos(a)*r,z=Math.sin(a)*r;if(groundH(x,z)<=h&&!inPond(x,z,1))break;r+=.3}return r} // walks past the pond to the real shore
 // distance to the sea along each direction, for the ocean sound
 const SHORE=[];for(let i=0;i<180;i++)SHORE.push(rAt(i/180*Math.PI*2,0));
 function shoreDist(x,z){const a=(Math.atan2(z,x)+Math.PI*2)%(Math.PI*2),i=Math.floor(a/(Math.PI*2)*180)%180;return Math.max(0,SHORE[i]-Math.hypot(x,z))}
@@ -243,7 +254,15 @@ const FISH=[
   {id:"hairtail",n:"갈치",ic:"🐟",w:10,cm:[60,120],night:1},
   {id:"gold",n:"황금 참돔",ic:"✨",w:.8,cm:[50,90],legend:1},
   {id:"moonray",n:"달빛 가오리",ic:"🌙",w:1,cm:[80,160],night:1,legend:1},
-  {id:"boot",n:"낡은 장화",ic:"🥾",w:6,junk:1}];
+  {id:"boot",n:"낡은 장화",ic:"🥾",w:6,junk:1},
+  // freshwater, only from the pond
+  {id:"minnow",n:"피라미",ic:"🐟",w:30,cm:[6,12],fresh:1},
+  {id:"crucian",n:"붕어",ic:"🐟",w:26,cm:[10,30],fresh:1},
+  {id:"carp",n:"잉어",ic:"🎏",w:12,cm:[30,80],fresh:1},
+  {id:"aucha",n:"꺽지",ic:"🐟",w:10,cm:[10,25],fresh:1},
+  {id:"eel",n:"장어",ic:"➰",w:7,cm:[40,90],fresh:1,nightBoost:1},
+  {id:"mandarin",n:"쏘가리",ic:"🐅",w:4,cm:[20,50],fresh:1},
+  {id:"goldfish",n:"금붕어",ic:"🐠",w:2.5,cm:[5,15],fresh:1,legend:1}];
 const FISH_BY=Object.fromEntries(FISH.map(f=>[f.id,f]));
 const RES_N={coconut:"코코넛",wood:"나무",leaf:"잎",shell:"조개"};
 function itemName(id){return RES_N[id]||FISH_BY[id]?.n||id}
@@ -456,9 +475,10 @@ function sh(m){m.castShadow=true;m.receiveShadow=true;return m}
 // ground
 const gGeo=new THREE.PlaneGeometry(400,400,220,220);gGeo.rotateX(-Math.PI/2);
 {const p=gGeo.attributes.position,cols=[];
-const wet=new THREE.Color(0xcfb47e),sand=new THREE.Color(0xf1dfae),grass=new THREE.Color(0x8cbf5e),grass2=new THREE.Color(0x63a046),hillC=new THREE.Color(0x9a9a7a),deep=new THREE.Color(0xb59c6c);
+const wet=new THREE.Color(0xcfb47e),sand=new THREE.Color(0xf1dfae),grass=new THREE.Color(0x8cbf5e),grass2=new THREE.Color(0x63a046),hillC=new THREE.Color(0x9a9a7a),deep=new THREE.Color(0xb59c6c),mud=new THREE.Color(0x7d6a45);
 for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),h=groundH(x,z);p.setY(i,h);
-  const c=h<-.2?deep:h<.25?wet:h<.95?sand:h>6?hillC:grass.clone().lerp(grass2,(Math.sin(x*.2)*Math.cos(z*.17)+1)/2);
+  const pd=Math.hypot(x-POND.x,z-POND.z);
+  const c=pd<POND.r+.6?(pd<POND.r-1.5?mud:wet):h<-.2?deep:h<.25?wet:h<.95?sand:h>6?hillC:grass.clone().lerp(grass2,(Math.sin(x*.2)*Math.cos(z*.17)+1)/2);
   cols.push(c.r,c.g,c.b)}
 gGeo.setAttribute("color",new THREE.Float32BufferAttribute(cols,3));gGeo.computeVertexNormals()}
 const ground=new THREE.Mesh(gGeo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}));ground.receiveShadow=true;scene.add(ground);
@@ -478,12 +498,21 @@ const items=[],colliders=[];
 const CAMP={x:3,z:8},HUT={x:-7,z:3};
 /* piers: the first is where the trading ship docks, the others are just for fishing */
 const PIER_W=1.4;
-const PIERS=[{a:-.5,len:14},{a:1.85,len:13},{a:3.7,len:13}].map(p=>({...p,u:{x:Math.cos(p.a),z:Math.sin(p.a)},s0:rAt(p.a,.35)-3}));
+const PIERS=[{a:-.5,len:14},{a:1.85,len:13},{a:2.75,len:13}].map(p=>({...p,u:{x:Math.cos(p.a),z:Math.sin(p.a)},s0:rAt(p.a,.35)-3}));
 const PIER_A=PIERS[0].a,PIER_S0=PIERS[0].s0,PIER_LEN=PIERS[0].len,PU=PIERS[0].u;
 function pierAt(x,z){for(const p of PIERS){const s=x*p.u.x+z*p.u.z,w=Math.abs(-x*p.u.z+z*p.u.x);if(s>p.s0&&s<p.s0+p.len&&w<PIER_W)return p}return null}
 function onPier(x,z){return !!pierAt(x,z)}
 const PIER_END={x:PU.x*(PIER_S0+PIER_LEN-1.5),z:PU.z*(PIER_S0+PIER_LEN-1.5)};
-const taken=[[CAMP.x,CAMP.z,6],[HUT.x,HUT.z,8],[0,rAt(Math.PI/2,1.1),3],...PIERS.map(p=>[p.u.x*(p.s0-2),p.u.z*(p.s0-2),7])];
+// camp fires around the island (index 0 is the original one in the middle)
+const beachZ=rAt(Math.PI/2,1.4);
+const CAMPS=[{x:CAMP.x,z:CAMP.z,seats:4},
+  {x:PIERS[1].u.x*(PIERS[1].s0-9),z:PIERS[1].u.z*(PIERS[1].s0-9),seats:3},
+  {x:PIERS[2].u.x*(PIERS[2].s0-9),z:PIERS[2].u.z*(PIERS[2].s0-9),seats:3},
+  {x:25.4,z:-40.3,seats:0},          // hill lookout, beside its two benches
+  {x:-44,z:8,seats:3},               // small west hill
+  {x:6,z:beachZ+2.8,seats:0},        // spawn beach, in front of its benches
+  {x:POND.x+3,z:POND.z+POND.r+4.5,seats:3}]; // pond side
+const taken=[[HUT.x,HUT.z,8],[0,rAt(Math.PI/2,1.1),3],[POND.x,POND.z,POND.r+3],...CAMPS.map(c=>[c.x,c.z,5]),...PIERS.map(p=>[p.u.x*(p.s0-2),p.u.z*(p.s0-2),7])];
 function freeSpot(rmin,rmax,gap,minH){for(let n=0;n<400;n++){const a=srnd()*Math.PI*2,r=(rmin+srnd()*(rmax-rmin))*R,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(groundH(x,z)>(minH??.9)&&taken.every(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)>tr+gap)){taken.push([x,z,gap]);return{x,z}}}return{x:0,z:0}}
 
@@ -496,6 +525,17 @@ for(const P of PIERS){const pier=new THREE.Group();scene.add(pier);const {u,s0,l
  // a lantern post at the end of each fishing pier
  if(P!==PIERS[0]){const e=s0+len-.4,post=sh(new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,1.6,5),woodMat));post.position.set(u.x*e-u.z*1.1,1.4,u.z*e+u.x*1.1);pier.add(post);
    const lamp=new THREE.Mesh(new THREE.BoxGeometry(.26,.3,.26),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.set(post.position.x,2.3,post.position.z);pier.add(lamp)}}
+
+/* pond: still water, lily pads, reeds and stones around the bank */
+const pondMat=new THREE.MeshPhongMaterial({color:0x3f9e98,transparent:true,opacity:.86,shininess:110,specular:0xbfeee8});
+const pondWater=new THREE.Mesh(new THREE.CircleGeometry(POND.r+.5,48),pondMat);pondWater.rotation.x=-Math.PI/2;pondWater.position.set(POND.x,POND.y,POND.z);scene.add(pondWater);
+{const padM=SM(0x5c9e3e),reedM=M(0x6f8f3a),stoneM=M(0x9a958a),lotus=SM(0xffb3d0);
+ for(let i=0;i<9;i++){const a=i*2.4,r=2+((i*37)%55)/10,p=new THREE.Mesh(new THREE.CylinderGeometry(.55,.55,.04,14,1,false,.3,Math.PI*1.8),padM);
+   p.position.set(POND.x+Math.cos(a)*r,POND.y+.03,POND.z+Math.sin(a)*r);p.rotation.y=a;scene.add(p);
+   if(i%3===0){const f=new THREE.Mesh(new THREE.ConeGeometry(.14,.22,6),lotus);f.position.set(p.position.x+.1,POND.y+.15,p.position.z);scene.add(f)}}
+ for(let i=0;i<26;i++){const a=i/26*Math.PI*2+Math.sin(i)*.1,r=POND.r+.6+Math.sin(i*3)*.5,x=POND.x+Math.cos(a)*r,z=POND.z+Math.sin(a)*r;
+   if(i%4===3){const s=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.35+(i%3)*.1,0),stoneM));s.position.set(x,groundH(x,z)+.1,z);s.scale.y=.6;scene.add(s);continue}
+   for(let k=0;k<3;k++){const c=new THREE.Mesh(new THREE.ConeGeometry(.05,1.3+k*.25,4),reedM);c.position.set(x+(k-1)*.18,groundH(x,z)+.6+k*.12,z+(k%2)*.15);c.rotation.z=(k-1)*.12;scene.add(c)}}}
 
 /* palms */
 const trunkMat=M(0x8a6a3e),leafMat=M(0x3f8a3a),cocoMat=M(0x6b4a24);
@@ -551,9 +591,6 @@ for(let i=0;i<40;i++){const a=srnd()*Math.PI*2,r=rAt(a,.45)-srnd()*3,x=Math.cos(
     act:()=>busy(.7,"줍는 중…",()=>{const n=chance(.3)?2:1;S.inv.shell+=n;Sh.cd=70;m.visible=false;log(`조개 ${n}개를 주웠다.`);beep(880,.08)})})}
 
 /* camp fire (shared: lit if anyone here lit it) */
-const camp=new THREE.Group();camp.position.set(CAMP.x,groundH(CAMP.x,CAMP.z),CAMP.z);scene.add(camp);
-for(let k=0;k<8;k++){const a=k/8*Math.PI*2,st=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),M(0x8d8a80)));st.position.set(Math.cos(a)*.8,.12,Math.sin(a)*.8);camp.add(st)}
-for(let k=0;k<3;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,1.1,5),woodMat);l.rotation.z=Math.PI/2;l.rotation.y=k*1.05;l.position.y=.12;camp.add(l)}
 /* log seats: around the fire, on the hill lookout, and on the beach facing the sea */
 let seat=null;
 function makeLogSeat(x,z,ry){
@@ -563,25 +600,32 @@ function makeLogSeat(x,z,ry){
   const st={x,z,y:y+.32,ry};
   items.push({x,z,r:1.7,label:()=>({t:"통나무 의자에 앉기",ok:true}),act:()=>{player.position.set(x,st.y,z);player.rotation.y=ry;startEmote("sit");seat=st}});
 }
-for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,x=CAMP.x+Math.cos(a)*2.7,z=CAMP.z+Math.sin(a)*2.7;makeLogSeat(x,z,Math.atan2(CAMP.x-x,CAMP.z-z))}
+for(const C0 of CAMPS)for(let k=0;k<C0.seats;k++){const a=k/C0.seats*Math.PI*2+.4,x=C0.x+Math.cos(a)*2.7,z=C0.z+Math.sin(a)*2.7;makeLogSeat(x,z,Math.atan2(C0.x-x,C0.z-z))}
 {const top={x:24,z:-38},o=Math.atan2(28,-44),px=Math.cos(o),pz=-Math.sin(o); // lookout on the big hill, facing out to sea
  [-1.2,1.2].forEach(s=>makeLogSeat(top.x+px*s,top.z+pz*s,o))}
 {const r=rAt(Math.PI/2,1.4);[-1.3,1.3].forEach(s=>makeLogSeat(6+s*1.9,r,0))}
-const flame1=new THREE.Mesh(new THREE.ConeGeometry(.42,1.2,6),new THREE.MeshBasicMaterial({color:0xf08a2c}));flame1.position.y=.7;
-const flame2=new THREE.Mesh(new THREE.ConeGeometry(.24,.8,6),new THREE.MeshBasicMaterial({color:0xffd25a}));flame2.position.y=.55;
-camp.add(flame1,flame2);
-const fireLight=new THREE.PointLight(0xff8a3a,0,16,1.6);fireLight.position.y=1.3;camp.add(fireLight);
-const smoke=[];for(let k=0;k<5;k++){const s=new THREE.Mesh(new THREE.IcosahedronGeometry(.3,0),new THREE.MeshLambertMaterial({color:0xbfbfbf,transparent:true,opacity:.5}));camp.add(s);smoke.push(s)}
-colliders.push({x:CAMP.x,z:CAMP.z,r:.9});
-let remoteFire=0;
-function fireLit(){return Math.max(S.fireUntil,remoteFire)>Date.now()}
-function fireNear(){return fireLit()&&Math.hypot(player.position.x-CAMP.x,player.position.z-CAMP.z)<4}
-function commonFish(){return ["anchovy","horse","mackerel"].find(id=>have(id)>0)}
-items.push({x:CAMP.x,z:CAMP.z,r:3,label:()=>{
-  if(fireLit())return commonFish()?{t:`${itemName(commonFish())} 구워 먹기`,ok:true}:{t:"모닥불 앞에서 멍때리기",ok:true};
-  return S.inv.wood>=3?{t:"모닥불 피우기 (나무 3)",ok:true}:{t:"모닥불 피우려면 나무 3개",ok:false}},
-  act:()=>{if(fireLit()){const f=commonFish();if(f){busy(2,"지글지글…",()=>{S.fish[f]--;log(`${itemName(f)} 구이 냠냠. 바다 맛이다.`);showBubble(meTag,"😋",true)})}else startEmote("zone")}
-    else busy(2.2,"나무 비비는 중…",()=>{S.inv.wood-=3;S.fireUntil=Date.now()+180000;log("모닥불이 타닥타닥 붙었다.");beep(330,.3,"sawtooth",.08)})}});
+/* camp fires: each is lit for everyone on the island while anyone's flame there is burning */
+if(!S.fires)S.fires={0:S.fireUntil||0};
+const remoteFires={};
+function fireLit(i){return Math.max(S.fires[i]||0,remoteFires[i]||0)>Date.now()}
+function anyFireLit(){return CAMPS.some((_,i)=>fireLit(i))}
+function fireNear(){return CAMPS.some((c,i)=>fireLit(i)&&Math.hypot(player.position.x-c.x,player.position.z-c.z)<4)}
+function commonFish(){return ["anchovy","horse","mackerel","crucian","minnow"].find(id=>have(id)>0)}
+CAMPS.forEach((C0,i)=>{
+  const g=new THREE.Group();g.position.set(C0.x,groundH(C0.x,C0.z),C0.z);scene.add(g);C0.g=g;
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2,st=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),M(0x8d8a80)));st.position.set(Math.cos(a)*.8,.12,Math.sin(a)*.8);g.add(st)}
+  for(let k=0;k<3;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,1.1,5),woodMat);l.rotation.z=Math.PI/2;l.rotation.y=k*1.05;l.position.y=.12;g.add(l)}
+  C0.f1=new THREE.Mesh(new THREE.ConeGeometry(.42,1.2,6),new THREE.MeshBasicMaterial({color:0xf08a2c}));C0.f1.position.y=.7;
+  C0.f2=new THREE.Mesh(new THREE.ConeGeometry(.24,.8,6),new THREE.MeshBasicMaterial({color:0xffd25a}));C0.f2.position.y=.55;g.add(C0.f1,C0.f2);
+  C0.light=new THREE.PointLight(0xff8a3a,0,16,1.6);C0.light.position.y=1.3;g.add(C0.light);
+  C0.smoke=[];for(let k=0;k<4;k++){const s=new THREE.Mesh(new THREE.IcosahedronGeometry(.3,0),new THREE.MeshLambertMaterial({color:0xbfbfbf,transparent:true,opacity:.5}));g.add(s);C0.smoke.push(s)}
+  colliders.push({x:C0.x,z:C0.z,r:.9});
+  items.push({x:C0.x,z:C0.z,r:3,label:()=>{
+    if(fireLit(i))return commonFish()?{t:`${itemName(commonFish())} 구워 먹기`,ok:true}:{t:"모닥불 앞에서 멍때리기",ok:true};
+    return S.inv.wood>=3?{t:"모닥불 피우기 (나무 3)",ok:true}:{t:"모닥불 피우려면 나무 3개",ok:false}},
+    act:()=>{if(fireLit(i)){const f=commonFish();if(f){busy(2,"지글지글…",()=>{S.fish[f]--;log(`${itemName(f)} 구이 냠냠.`);showBubble(meTag,"😋",true)})}else startEmote("zone")}
+      else busy(2.2,"나무 비비는 중…",()=>{S.inv.wood-=3;S.fires[i]=Date.now()+180000;S.lastFire=i;log("모닥불이 타닥타닥 붙었다.");beep(330,.3,"sawtooth",.08)})}});
+});
 
 /* decor from the trading ship, set up in the rest area beside the camp fire */
 const decor={};
@@ -655,8 +699,11 @@ function makeChibi(shirtHex,hatIdx,captain){
     const a=sh(new THREE.Mesh(new THREE.SphereGeometry(.11,12,10),sleeve));a.scale.set(1,1.7,1);a.position.y=-.15;ap.add(a);
     const hand=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),skin);hand.position.y=-.33;ap.add(hand);ap.userData.hand=hand;
     rig.add(ap);arms.push(ap)}
-  const rod=new THREE.Group();rod.position.set(.42,.72,.22);rod.rotation.x=-1.0;rod.visible=false;rig.add(rod);
-  {const pole=new THREE.Mesh(new THREE.CylinderGeometry(.02,.035,2.4,5),SM(0x8a6a3e));pole.position.y=1.2;rod.add(pole);rod.userData.pole=pole}
+  // rod held in both hands in front of the belly
+  const rod=new THREE.Group();rod.position.set(.06,.74,.36);rod.rotation.x=1.05;rod.visible=false;rig.add(rod);
+  {const pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.034,2.4,6),SM(0x8a6a3e));pole.position.y=1.25;rod.add(pole);rod.userData.pole=pole;
+   const grip=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.42,8),SM(0x3a2a1e));grip.position.y=-.05;rod.add(grip);
+   const reel=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.07,12),SM(0xc9ccd2));reel.rotation.z=Math.PI/2;reel.position.set(.08,.15,0);rod.add(reel)}
   scene.add(g);
   // hair and beard pieces, swapped from the costume menu
   const hairM=SM(0x5b3a26),hairG=new THREE.Group(),beardG=new THREE.Group();headG.add(hairG,beardG);
@@ -727,7 +774,17 @@ function animChibi(ch,st,dt,t){
   rig.rotation.set(0,0,moving?Math.sin(ch.walkPh)*.06:0);rig.position.set(0,0,0);headG.rotation.set(0,0,0);
   let eyeOpen=1;ch.rod.visible=!!st.fishing;
   if(st.busy){arms[0].rotation.x=-1.2+Math.sin(t*10)*.3;arms[1].rotation.x=-1.2-Math.sin(t*10)*.3}
-  if(st.fishing){arms[1].rotation.x=-1.0;arms[0].rotation.x=-.7;arms[0].rotation.z=-.3;if(st.bite){ch.rod.rotation.x=-1.0+Math.sin(t*30)*.12}else ch.rod.rotation.x=-1.0}
+  if(st.fishing){ // swing the rod back over the shoulder, whip it forward, then hold it at the belly with both hands
+    // rod rotation.x: +1.05 points forward-up over the water, negative points back over the shoulder
+    const c=st.cast??1;let rx;
+    if(c<0)rx=1.05-1.75*((c+.45)/.45);
+    else if(c<.35)rx=-.7+2.05*(c/.35);
+    else if(c<1)rx=1.35-.3*Math.min(1,(c-.35)/.35);
+    else rx=1.05+Math.sin(t*1.3)*.03+(st.bite?Math.sin(t*30)*.12+.12:0);
+    ch.rod.rotation.x=rx;
+    const armX=-.72-Math.max(0,1.05-rx)*1.05;
+    arms[1].rotation.x=armX;arms[0].rotation.x=armX*.96;arms[1].rotation.z=-.38;arms[0].rotation.z=.48;
+    rig.rotation.x=st.bite?.12:.05}
   const e=st.emo;
   if(e){const et=e.t;
     if(e.id==="wave"){arms[1].rotation.z=2.5+Math.sin(et*12)*.35;headG.rotation.z=Math.sin(et*6)*.08}
@@ -911,13 +968,13 @@ const map=$("map"),mctx=map.getContext("2d"),MS=120,MR=R*1.3;
 const mapBg=document.createElement("canvas");mapBg.width=mapBg.height=MS;
 {const c=mapBg.getContext("2d"),img=c.createImageData(MS,MS);
  for(let y=0;y<MS;y++)for(let x=0;x<MS;x++){const wx=(x/MS*2-1)*MR,wz=(y/MS*2-1)*MR,h=groundH(wx,wz),i=(y*MS+x)*4;
-   const col=onPier(wx,wz)?[164,123,74]:h<0?[42,157,176]:h<.95?[241,223,174]:h>6?[154,154,122]:[130,184,90];img.data.set([...col,255],i)}
+   const col=onPier(wx,wz)?[164,123,74]:inPond(wx,wz)?[63,158,152]:h<0?[42,157,176]:h<.95?[241,223,174]:h>6?[154,154,122]:[130,184,90];img.data.set([...col,255],i)}
  c.putImageData(img,0,0)}
 function w2m(x,z){return[(x/MR+1)/2*MS,(z/MR+1)/2*MS]}
 function drawMap(){
   mctx.clearRect(0,0,MS,MS);mctx.save();mctx.beginPath();mctx.arc(MS/2,MS/2,MS/2,0,7);mctx.clip();mctx.drawImage(mapBg,0,0);
   const dot=(x,z,c,r,stroke)=>{const [a,b]=w2m(x,z);mctx.fillStyle=c;mctx.beginPath();mctx.arc(a,b,r||3,0,7);mctx.fill();if(stroke){mctx.strokeStyle="#2b2a26";mctx.lineWidth=1;mctx.stroke()}};
-  dot(CAMP.x,CAMP.z,fireLit()?"#ff7a1a":"#7a6a58",3.5);
+  CAMPS.forEach((c,i)=>dot(c.x,c.z,fireLit(i)?"#ff7a1a":"#7a6a58",3));
   dot(C.x,C.z,"#d9533a",2.5);
   if(ship.visible){const [a,b]=w2m(ship.position.x,ship.position.z);mctx.fillStyle="#7a2f2a";mctx.fillRect(Math.max(4,Math.min(MS-10,a-4)),Math.max(4,Math.min(MS-8,b-2)),9,5)}
   remotes.forEach(r=>dot(r.g.position.x,r.g.position.z,"#ffffff",2.6,true));
@@ -927,7 +984,8 @@ function drawMap(){
   mctx.restore();mctx.strokeStyle="#2b2a26";mctx.lineWidth=2;mctx.beginPath();mctx.arc(MS/2,MS/2,MS/2-1,0,7);mctx.stroke()}
 
 /* ---------- actions ---------- */
-function nearWater(){return groundH(player.position.x,player.position.z)<.3||onPier(player.position.x,player.position.z)}
+function byPond(){const x=player.position.x,z=player.position.z;return inPond(x,z,2.8)}
+function nearWater(){return groundH(player.position.x,player.position.z)<.3||onPier(player.position.x,player.position.z)||byPond()}
 let busyS=null;
 function busy(dur,text,fn){if(busyS)return;emo=null;busyS={t:0,dur,fn};$("busyText").textContent=text;$("busy").hidden=false}
 let current=null;
@@ -946,13 +1004,14 @@ function makeGear(){
   const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75}));l.visible=false;l.frustumCulled=false;scene.add(l);
   return{b,l,cast:1,from:new THREE.Vector3(),to:new THREE.Vector3()}}
 function rodTip(ch){ch.rod.updateMatrixWorld(true);return _tip.set(0,2.4,0).applyMatrix4(ch.rod.matrixWorld)}
-function castGear(G,ch,bx,bz){G.from.copy(rodTip(ch));G.to.set(bx,0,bz);G.cast=0;G.b.visible=G.l.visible=true}
+function castGear(G,ch,bx,bz){G.from.copy(rodTip(ch));G.to.set(bx,0,bz);G.cast=-.45;G.lvl=inPond(bx,bz)?POND.y:0;G.b.visible=G.l.visible=true}
 function hideGear(G){G.b.visible=G.l.visible=false}
 function updGear(G,ch,t,dt,bite){
-  if(!G.b.visible)return;const tip=rodTip(ch),wy=waveY(G.to.x,G.to.z,t);
-  if(G.cast<1){G.cast=Math.min(1,G.cast+dt/.6);const k=G.cast;G.b.position.lerpVectors(G.from,G.to,k);G.b.position.y=G.from.y+(wy-G.from.y)*k+Math.sin(k*Math.PI)*4.5}
+  if(!G.b.visible)return;const tip=rodTip(ch),wy=G.lvl?G.lvl+Math.sin(t*1.4+G.to.x)*.02:waveY(G.to.x,G.to.z,t);
+  if(G.cast<0){G.cast+=dt/.6;G.b.position.copy(tip);if(G.cast>=0)G.from.copy(tip)}   // wind-up: bobber hangs at the rod tip
+  else if(G.cast<1){G.cast=Math.min(1,G.cast+dt/.6);const k=G.cast;G.b.position.lerpVectors(G.from,G.to,k);G.b.position.y=G.from.y+(wy-G.from.y)*k+Math.sin(k*Math.PI)*4.5}
   else G.b.position.set(G.to.x,wy+.05-(bite?.22+Math.sin(t*25)*.08:Math.sin(t*3)*.03),G.to.z);
-  const pa=G.l.geometry.attributes.position,dx=G.b.position.x-tip.x,dy=G.b.position.y+.12-tip.y,dz=G.b.position.z-tip.z,sag=Math.hypot(dx,dz)*.06*G.cast;
+  const pa=G.l.geometry.attributes.position,dx=G.b.position.x-tip.x,dy=G.b.position.y+.12-tip.y,dz=G.b.position.z-tip.z,sag=Math.hypot(dx,dz)*.06*Math.max(0,G.cast);
   for(let i=0;i<LINE_N;i++){const k=i/(LINE_N-1);pa.setXYZ(i,tip.x+dx*k,tip.y+dy*k-sag*4*k*(1-k),tip.z+dz*k)}pa.needsUpdate=true}
 const myGear=makeGear();
 /* outfit skills: a web line that shoots out and sticks, a rock that arcs, bounces and vanishes */
@@ -989,20 +1048,22 @@ let jumpY=0,jumpV=0,liftY=0;
 function doJump(){if(!started||busyS||jumpY>0||jumpV>0)return;if(fishS)stopFishing("");if(seat){seat=null;emo=null}
   if(emo&&emo.id!=="sit")emo=null;jumpV=8.2;jumpY=.001;beep(520,.1,"triangle",.1);beep(780,.08,"triangle",.06,.06)}
 function startFishing(){
-  emo=null;seat=null;const px=player.position.x,pz=player.position.z,pr=pierAt(px,pz);
-  let dx,dz;if(pr){dx=pr.u.x;dz=pr.u.z}else{const l=Math.hypot(px,pz)||1;dx=px/l;dz=pz/l}
-  let d=9;while(!pr&&d<17&&groundH(px+dx*d,pz+dz*d)>-.25)d+=2;   // throw well out past the shallows
-  const bx=px+dx*d,bz=pz+dz*d;
+  emo=null;seat=null;const px=player.position.x,pz=player.position.z,pr=pierAt(px,pz),fresh=byPond();
+  let dx,dz,bx,bz;
+  if(fresh){const tx=POND.x-px,tz=POND.z-pz,l=Math.hypot(tx,tz)||1;dx=tx/l;dz=tz/l;const d=Math.max(3,Math.min(l-1.5,l*.75));bx=px+dx*d;bz=pz+dz*d}
+  else{if(pr){dx=pr.u.x;dz=pr.u.z}else{const l=Math.hypot(px,pz)||1;dx=px/l;dz=pz/l}
+    let d=9;while(!pr&&d<17&&groundH(px+dx*d,pz+dz*d)>-.25)d+=2;   // throw well out past the shallows
+    bx=px+dx*d;bz=pz+dz*d}
   player.rotation.y=Math.atan2(dx,dz);
   const fast=S.rod?.6:1;
-  fishS={phase:"wait",t:0,bite:.6+(2+Math.random()*4.5)*fast,bx,bz};
+  fishS={phase:"wait",t:0,bite:.6+(2+Math.random()*4.5)*fast,bx,bz,fresh};
   castGear(myGear,me,bx,bz);beep(260,.25,"sine",.08);beep(520,.12,"sine",.05,.55);
 }
 function stopFishing(msg){fishS=null;hideGear(myGear);if(msg)log(msg)}
 function isNightNow(){const h=hourNow();return h>=19||h<5}
 function rollFish(){
-  const night=isNightNow(),boost=(S.crab>=5?1.4:1)*(S.rod?1.8:1);
-  const pool=FISH.filter(f=>!f.night||night).map(f=>({f,w:f.w*((f.legend||f.id==="seahorse"||f.id==="octopus")?boost:1)}));
+  const night=isNightNow(),boost=(S.crab>=5?1.4:1)*(S.rod?1.8:1),fresh=!!(fishS&&fishS.fresh);
+  const pool=FISH.filter(f=>(f.junk||!!f.fresh===fresh)&&(!f.night||night)).map(f=>({f,w:f.w*((f.legend||f.id==="seahorse"||f.id==="octopus"||f.id==="mandarin")?boost:1)*(f.nightBoost&&night?2:1)}));
   let r=Math.random()*pool.reduce((a,b)=>a+b.w,0);for(const p of pool){r-=p.w;if(r<=0)return p.f}return pool[0].f}
 function reelIn(){
   if(!fishS)return;
@@ -1023,7 +1084,7 @@ function openDex(){
   el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3>물고기 도감 ${caught}/${list.length}</h3><button class="btn" id="dexClose">닫기</button></div>
     <p style="font-size:.85rem;color:var(--ink-soft)">밤에만 나오는 물고기도 있다. 꽃게 씨와 친해지면 귀한 물고기가 잘 잡힌다.</p>
     <div class="dex">${list.map(f=>{const d=S.dex[f.id];return d?`<div class="fish ${f.legend?"legend":""}"><span class="ic">${f.ic}</span><b>${f.n}</b><small>${d.c}마리 · 최대 ${d.best}cm</small><small>가방에 ${S.fish[f.id]||0}</small></div>`
-      :`<div class="fish no"><span class="ic">❔</span><b>???</b><small>${f.night?"밤에 나온다는 소문":f.legend?"전설로만 들었다":"아직 못 만났다"}</small></div>`}).join("")}</div></div>`;
+      :`<div class="fish no"><span class="ic">❔</span><b>???</b><small>${f.fresh?(f.legend?"연못에 산다는 전설":"연못에서 만날 수 있다"):f.night?"밤에 나온다는 소문":f.legend?"전설로만 들었다":"아직 못 만났다"}</small></div>`}).join("")}</div></div>`;
   el.hidden=false;$("dexClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true}}
 function openTrade(){
   const sn=shipNow();if(!sn.here)return;
@@ -1070,7 +1131,7 @@ function upRemote(p){
   if(pr.st!==r.st){const first=r.st===0&&Date.now()-num(pr.st,0,1e15)>8000;r.st=pr.st;
     if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
       if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
-  r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);
+  r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);r.fi=Math.abs(num(pr.fi,0,99)|0)%CAMPS.length;
 }
 function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);if(r.gear){scene.remove(r.gear.b);scene.remove(r.gear.l)}r.tag.el.remove();remotes.delete(peer)}
 function setWho(){const w=$("who");if(chan){w.classList.add("on");$("whoText").textContent=`${chanName} · ${remotes.size+1}/${CAP}명 ▾`}else{w.classList.remove("on");$("whoText").textContent="혼자 있는 섬"}}
@@ -1110,7 +1171,7 @@ function openServers(){
 function sendPresence(){
   if(!chan||!online())return;
   const P={n:S.nick,c:S.shirt,h:S.hat,hr:S.hair,bd:S.beard,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
-    a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fireUntil,
+    a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fires[S.lastFire|0]||0,fi:S.lastFire|0,
     j:+liftY.toFixed(2)};
   if(fishS){P.bx=+fishS.bx.toFixed(2);P.bz=+fishS.bz.toFixed(2)}
   const k=JSON.stringify(P);if(k===sentKey)return;sentKey=k;ws.send(JSON.stringify({t:"p",p:P}));
@@ -1163,20 +1224,20 @@ function update(dt,t){
     spd=jm>.05?(running?7.5:1.5+Math.min(1,jm)*2.8):(keys.ShiftLeft||keys.ShiftRight?10.5:6);const sp=spd*dt;
     let nx=player.position.x+mx*sp,nz=player.position.z+mz*sp;
     for(const c of colliders){if(c.need&&!c.need())continue;const dx=nx-c.x,dz=nz-c.z,d=Math.hypot(dx,dz),min=c.r+.4;if(d<min&&d>0){nx=c.x+dx/d*min;nz=c.z+dz/d*min}}
-    if(groundH(nx,nz)>-.4||onPier(nx,nz)){player.position.x=nx;player.position.z=nz}
+    if((groundH(nx,nz)>-.4||onPier(nx,nz))&&!inPond(nx,nz,-1.2)){player.position.x=nx;player.position.z=nz}
     const target=Math.atan2(mx,mz);let diff=target-player.rotation.y;diff=Math.atan2(Math.sin(diff),Math.cos(diff));player.rotation.y+=diff*Math.min(1,dt*12);
   }
   if(emo){emo.t+=dt;maybeFire(emo,me);if(emo.t>emo.dur)emo=null}
   updShots(dt);
   if(seat&&!(emo&&emo.id==="sit"))seat=null;
-  animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite",air:jumpY>.05},dt,t);
+  animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite",air:jumpY>.05,cast:myGear.cast},dt,t);
   const baseY=groundBase(player.position.x,player.position.z);
   player.position.y=(seat?seat.y:baseY)+jumpY;
   liftY=player.position.y-baseY;
   updGear(myGear,me,t,dt,fishS&&fishS.phase==="bite");
   S.px=player.position.x;S.pz=player.position.z;
   /* remotes: walk, jump, sit and fish just like they do on their own screen */
-  remoteFire=0;
+  for(const k in remoteFires)remoteFires[k]=0;
   remotes.forEach(r=>{const p=r.g.position,dx=r.tx-p.x,dz=r.tz-p.z,d=Math.hypot(dx,dz);
     const k=Math.min(1,dt*10);p.x+=dx*k;p.z+=dz*k;r.speed=r.speed*.8+(d/Math.max(dt,.001))*k*.2;
     r.jy+=(r.tj-r.jy)*Math.min(1,dt*18);p.y=groundBase(p.x,p.z)+r.jy;
@@ -1185,10 +1246,10 @@ function update(dt,t){
     // the sender clears its own emote when it walks; here we only follow what it says (catching up must not cancel a throw)
     const mv=r.speed>.8&&!(r.emo&&r.emo.id!=="sit");
     const fishing=r.a==="fish"||r.a==="bite";
-    animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing,bite:r.a==="bite",air:r.tj>.4&&!(r.emo&&r.emo.id==="sit")},dt,t);
+    animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing,bite:r.a==="bite",air:r.tj>.4&&!(r.emo&&r.emo.id==="sit"),cast:r.gear?r.gear.cast:1},dt,t);
     if(fishing&&Number.isFinite(r.bx)){if(!r.gear)r.gear=makeGear();if(!r.gear.b.visible||r.gear.to.x!==r.bx||r.gear.to.z!==r.bz)castGear(r.gear,r,r.bx,r.bz);updGear(r.gear,r,t,dt,r.a==="bite")}
     else if(r.gear)hideGear(r.gear);
-    if(r.fire>remoteFire)remoteFire=r.fire});
+    if(r.fire>(remoteFires[r.fi]||0))remoteFires[r.fi]=r.fire});
   /* camera */
   const tgt=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);
   // in the costume menu the camera comes close and frames the character above the panel
@@ -1245,10 +1306,10 @@ function update(dt,t){
   if(!reduce)waves(t);
   for(const p of palms){p.crown.rotation.z=Math.sin(t*1.1+p.ph)*.05;p.crown.rotation.x=Math.cos(t*.9+p.ph)*.04;p.cocos.forEach((c,i)=>c.visible=p.cd<=0||i===0&&p.cd<10)}
   /* fire */
-  const lit=fireLit();flame1.visible=flame2.visible=lit;smoke.forEach(s=>s.visible=lit);
-  if(lit){const fl=1+Math.sin(t*17)*.12;flame1.scale.set(fl,1+Math.sin(t*13)*.15,fl);flame2.scale.set(fl,1+Math.cos(t*15)*.2,fl);fireLight.intensity=1.6+Math.sin(t*20)*.3+night*1.5;
-    smoke.forEach((s,i)=>{const k=((t*.35+i/5)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
-  else fireLight.intensity=0;
+  CAMPS.forEach((C0,ci)=>{const lit=fireLit(ci);C0.f1.visible=C0.f2.visible=lit;C0.smoke.forEach(s=>s.visible=lit);
+    if(lit){const fl=1+Math.sin(t*17+ci)*.12;C0.f1.scale.set(fl,1+Math.sin(t*13+ci)*.15,fl);C0.f2.scale.set(fl,1+Math.cos(t*15+ci)*.2,fl);C0.light.intensity=1.6+Math.sin(t*20+ci)*.3+night*1.5;
+      C0.smoke.forEach((s,i)=>{const k=((t*.35+i/4)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
+    else C0.light.intensity=0});
   for(const k in decor)decor[k].visible=!!S.decor[k];
   decor.lantern.userData.light.intensity=S.decor.lantern?night*1.6:0;
   decor.flag.userData.flag.rotation.y=Math.sin(t*3)*.25;
