@@ -50,6 +50,9 @@ body{font-family:var(--body);font-size:14px;-webkit-user-select:none;user-select
 #inv{position:fixed;top:var(--st);right:var(--sr);display:flex;flex-direction:column;align-items:flex-end}
 #bagBtn{font:inherit;font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:4px;padding:4px 12px 4px 8px;border-radius:999px;cursor:pointer}
 #bagBtn span{font-size:1.35rem;line-height:1}
+#miniRes{display:grid;grid-template-columns:repeat(2,auto);gap:3px;margin-top:4px;justify-content:end}
+#miniRes span{background:var(--panel);border:1.5px solid var(--ink);border-radius:10px;padding:0 6px;font-size:.72rem;line-height:1.5;font-variant-numeric:tabular-nums;text-align:right;min-width:38px}
+#bagBtn[hidden]~#miniRes{display:none}
 #bagPanel{padding:8px 10px;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:min(240px,70vw)}
 #bagPanel .bagHead{display:flex;justify-content:space-between;align-items:center;font-family:var(--display);font-size:1.15rem;font-weight:700}
 #bagPanel button.chip{text-align:left;white-space:normal}
@@ -98,7 +101,9 @@ body.touch .emo span{font-size:1.2rem}
 body.touch .emo small{display:none}
 body.touch #prompt{left:calc(50vw + 20px);bottom:calc(var(--sb) + 40px);font-size:1rem;padding:5px 12px;white-space:normal;text-align:center;max-width:calc(100vw - 260px);line-height:1.2}
 body.touch #prompt kbd{display:none}
-body.touch #chatForm{bottom:calc(var(--sb) + 140px)}
+body.touch #chatForm{top:calc(var(--st) + 64px);bottom:auto;width:min(300px,calc(100% - 150px));padding:3px;gap:4px;left:calc(50% - 10px)}
+body.touch #chatIn{font-size:16px;padding:3px 8px}
+body.touch #chatForm .btn{font-size:.9rem!important;padding:1px 8px!important;box-shadow:2px 2px 0 var(--ink)}
 body.touch #toast{top:calc(var(--st) + 62px);font-size:1.1rem}
 body.touch #log{top:calc(var(--st) + 104px)}
 .overlay{position:fixed;inset:0;background:rgba(15,30,40,.55);display:flex;align-items:center;justify-content:center;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -115,6 +120,16 @@ body.touch #log{top:calc(var(--st) + 104px)}
 .btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 .field{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--ink-soft)}
 .field input{font:inherit;font-size:1.05rem;border:1.5px solid var(--ink);border-radius:8px;padding:6px 10px;background:#fffaf0;color:var(--ink);-webkit-user-select:text;user-select:text}
+#costume{align-items:flex-end;background:linear-gradient(transparent 35%,rgba(15,30,40,.25))}
+#costume:not([hidden])~#emotes,body:has(#costume:not([hidden])) #emotes{display:none}
+.card.costume{max-height:58%;gap:8px;padding:12px 14px}
+.cRow{display:flex;flex-direction:column;gap:4px}
+.cRow>b{font-family:var(--display);font-size:1.1rem}
+.cOpts{display:flex;flex-wrap:wrap;gap:5px}
+.cOpt{font:inherit;font-size:.82rem;background:#fffaf0;color:var(--ink);border:1.5px solid var(--ink);border-radius:14px;padding:3px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.cOpt.on{background:var(--sea);color:#fdf6e6;border-color:var(--sea)}
+.cOpt:disabled{opacity:.45;cursor:not-allowed}
+.cOpt i{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.35);display:inline-block}
 .dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
 .fish{border:1.5px solid var(--ink);border-radius:8px;padding:6px 8px;background:#fffaf0;display:flex;flex-direction:column;gap:1px;min-width:0}
 .fish.no{border-style:dashed;opacity:.55}
@@ -153,12 +168,12 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 
 <div id="inv">
   <button id="bagBtn" class="panel" aria-expanded="false"><span>🎒</span>가방</button>
+  <div id="miniRes" aria-label="가진 것"></div>
   <div id="bagPanel" class="panel" hidden>
     <div class="bagHead">🎒 가방<button id="bagClose" class="mini" aria-label="가방 닫기">✕</button></div>
     <div class="res" id="res"></div>
     <button class="chip" id="dexBtn"></button>
     <button class="chip" id="hatBtn"></button>
-    <button class="chip" id="sendBottle"></button>
   </div>
 </div>
 
@@ -166,7 +181,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="toast" class="panel off"></div>
 <div id="busy" class="panel" hidden><span id="busyText"></span><div class="bar"><i id="busyBar"></i></div></div>
 <button id="prompt" class="panel" hidden></button>
-<form id="chatForm" class="panel" hidden><input id="chatIn" maxlength="40" placeholder="한마디 하기 (Enter)" autocomplete="off"><button class="btn" type="submit" style="font-size:1rem;padding:2px 10px">말하기</button></form>
+<form id="chatForm" class="panel" hidden><input id="chatIn" maxlength="40" placeholder="한마디 하기" autocomplete="off" enterkeyhint="send"><button class="btn" type="submit" style="font-size:1rem;padding:2px 10px">보내기</button></form>
 <div id="emotes" class="panel"></div>
 <div id="joy" hidden><div id="knob"></div></div>
 <button id="runBtn" class="panel" hidden>달리기</button>
@@ -183,6 +198,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 </div>
 <div id="dex" class="overlay" hidden></div>
 <div id="trade" class="overlay" hidden></div>
+<div id="costume" class="overlay" hidden></div>
 <div id="servers" class="overlay" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -226,14 +242,16 @@ const FISH=[
   {id:"hairtail",n:"갈치",ic:"🐟",w:10,cm:[60,120],night:1},
   {id:"gold",n:"황금 참돔",ic:"✨",w:.8,cm:[50,90],legend:1},
   {id:"moonray",n:"달빛 가오리",ic:"🌙",w:1,cm:[80,160],night:1,legend:1},
-  {id:"boot",n:"낡은 장화",ic:"🥾",w:6,junk:1},
-  {id:"bottle",n:"빈 병",ic:"🍾",w:4,junk:1}
-];
+  {id:"boot",n:"낡은 장화",ic:"🥾",w:6,junk:1}];
 const FISH_BY=Object.fromEntries(FISH.map(f=>[f.id,f]));
-const RES_N={coconut:"코코넛",wood:"나무",leaf:"잎",shell:"조개",bottle:"빈 병"};
+const RES_N={coconut:"코코넛",wood:"나무",leaf:"잎",shell:"조개"};
 function itemName(id){return RES_N[id]||FISH_BY[id]?.n||id}
-const HATS=[{n:"밀짚모자",c:0xf4d27a,r:0xe8604c},{n:"분홍 모자",c:0xffb3c7,r:0xffffff},{n:"하늘색 모자",c:0x9fd3f0,r:0x2f7fa0},{n:"민트 모자",c:0xa8e6cf,r:0x3f8a5a},{n:"선장 모자",c:0xffffff,r:0x1f3a5f}];
-const SHIRTS=[0xff9f8a,0x8fd3a8,0xffd166,0xb5a8ff,0x7ec3e6,0xffb3c7];
+const HATS=[{n:"밀짚모자",c:0xf4d27a,r:0xe8604c},{n:"분홍 모자",c:0xffb3c7,r:0xffffff},{n:"하늘색 모자",c:0x9fd3f0,r:0x2f7fa0},{n:"민트 모자",c:0xa8e6cf,r:0x3f8a5a},{n:"선장 모자",c:0xffffff,r:0x1f3a5f},{n:"모자 없음",c:0,r:0,none:1}];
+const FREE_HATS=[0,5];
+const SHIRTS=[0xff9f8a,0x8fd3a8,0xffd166,0xb5a8ff,0x7ec3e6,0xffb3c7,0xf6f1e6,0x3d4a5c];
+const SHIRT_N=["산호","민트","망고","라벤더","바다","복숭아","하양","밤바다"];
+const HAIRS=["기본","앞머리","양갈래","삐죽머리","뽀글머리"];
+const BEARDS=["없음","콧수염","턱수염","염소수염"];
 const POOL=[
   {give:{mackerel:3},get:{decor:"hammock"},n:"해먹",d:"모닥불 옆에 걸어 줄게. 누워서 파도 소리 듣기 좋아."},
   {give:{coconut:5},get:{hat:1},n:"분홍 모자",d:"요즘 섬 패션은 분홍이래."},
@@ -245,20 +263,19 @@ const POOL=[
   {give:{puffer:1,shell:3},get:{hat:3},n:"민트 모자",d:"복어는 내가 잘 키워 볼게."},
   {give:{leaf:10},get:{decor:"parasol"},n:"파라솔과 의자",d:"선착장 앞 모래사장에 펴 줄게."},
   {give:{boot:2},get:{coconut:4},n:"코코넛 4개",d:"장화 모으는 게 내 취미라서 말이야."},
-  {give:{horse:3},get:{bottle:2},n:"빈 병 2개",d:"편지 쓸 일 있으면 써."},
+  {give:{horse:3},get:{shell:5},n:"조개 5개",d:"전갱이 구이가 먹고 싶었거든."},
   {give:{hairtail:1,coconut:2},get:{hat:4},n:"선장 모자",d:"나랑 똑같은 거야. 특별히."},
   {give:{octopus:1},get:{shell:10},n:"조개 10개",d:"문어는 내 친구 해 줄 거야."},
   {give:{shell:4,wood:2},get:{decor:"castle"},n:"모래성 세트",d:"해변에 멋지게 지어 줄게."}
 ];
 const CRAB_LINES=["꽃게 씨는 집게를 두 번 딸깍였다. 반갑다는 뜻이겠지.","꽃게 씨에게 오늘 잡은 물고기 자랑을 했다. 옆으로 걸어가 버렸다.","꽃게 씨가 발가락을 살짝 집었다. 친해진 것 같다.","꽃게 씨에게 고민을 말했다. 거품만 뽀글뽀글.","꽃게 씨랑 수평선을 같이 봤다."];
-const BOTTLE_REPLIES=["병편지 답장: '저도 무인도인데요? 반가워요.'","병편지 답장: '광고 문의는 DM 주세요.' 바다에도 DM이?","병편지 답장: '그쪽 섬 날씨 어때요? 여긴 비 와요.'","병편지 답장과 함께 조개 3개가 들어 있었다!","내가 보낸 병이 그대로 돌아왔다. 바다가 반송했다."];
 const ZONE_LINES=["파도 소리를 듣다 보니 마음이 잔잔해졌다.","구름이 코코넛 모양이다.","아무 생각도 안 했다. 좋았다.","수평선이 오늘따라 반듯하다."];
 const NICK_A=["졸린","배고픈","씩씩한","멍때리는","햇볕 탄","소금기 묻은","느긋한","수줍은"],NICK_B=["코코넛","소라게","갈매기","야자수","조개","파도","모래알","해파리"];
 
 /* ---------- save ---------- */
 function dayIdx(){return Math.floor(Date.now()/1000/DAY_LEN)}
 function fresh(){return{nick:NICK_A[rand(0,7)]+" "+NICK_B[rand(0,7)],shirt:rand(0,SHIRTS.length-1),hat:0,hats:[0],
-  inv:{coconut:0,wood:0,leaf:0,shell:0,bottle:1},fish:{},dex:{},decor:{},rod:0,hut:false,crab:0,
+  inv:{coconut:0,wood:0,leaf:0,shell:0},hair:0,beard:0,fish:{},dex:{},decor:{},rod:0,hut:false,crab:0,
   traded:{},pend:[],firstMs:Date.now(),px:null,pz:null,fireUntil:0,
   log:[{t:"파도 소리에 눈을 떴다. 오늘은 뭐 하고 놀까.",c:""}]}}
 let S=null;
@@ -272,6 +289,8 @@ if(!S.firstMs)S.firstMs=Date.now();
 function myDay(){const startDay=Math.floor(S.firstMs/1000/DAY_LEN);return Math.max(1,dayIdx()-startDay+1)}
 function startSpot(){S.px=0;S.pz=rAt(Math.PI/2,1.1)}
 if(S.px==null)startSpot();
+for(const h of FREE_HATS)if(!S.hats.includes(h))S.hats.push(h);
+S.hair=S.hair|0;S.beard=S.beard|0;if(!(S.shirt>=0&&S.shirt<SHIRTS.length))S.shirt=0;
 function have(id){return (id in S.inv?S.inv[id]:S.fish[id])||0}
 function addItem(id,n){if(id in RES_N)S.inv[id]=(S.inv[id]||0)+n;else S.fish[id]=(S.fish[id]||0)+n}
 
@@ -288,9 +307,10 @@ function fishCount(){return Object.values(S.fish).reduce((a,b)=>a+b,0)}
 function renderInv(){
   const caught=FISH.filter(f=>!f.junk&&S.dex[f.id]).length,total=FISH.filter(f=>!f.junk).length;
   $("dexBtn").innerHTML=`📖 도감 ${caught}/${total} · 물고기 ${fishCount()} ${touch?"":"<kbd>B</kbd>"}`;
-  $("hatBtn").innerHTML=`🎩 ${HATS[S.hat].n} ${S.hats.length>1?"· 바꾸기":""}`;$("hatBtn").disabled=S.hats.length<2;
-  $("sendBottle").innerHTML=`🍾 빈 병 ${S.inv.bottle} · 편지 띄우기`;$("sendBottle").disabled=!S.inv.bottle||!nearWater();
-  $("res").innerHTML=`<span class="chip">🥥 ${S.inv.coconut}</span><span class="chip">🪵 ${S.inv.wood}</span><span class="chip">🌿 ${S.inv.leaf}</span><span class="chip">🐚 ${S.inv.shell}</span>`;
+  $("hatBtn").innerHTML=`👕 코스튬 · 옷 · 모자 · 헤어 · 수염`;
+  const r4=[["🥥",S.inv.coconut],["🪵",S.inv.wood],["🌿",S.inv.leaf],["🐚",S.inv.shell]];
+  $("res").innerHTML=r4.map(([i,n])=>`<span class="chip">${i} ${n}</span>`).join("");
+  $("miniRes").innerHTML=r4.map(([i,n])=>`<span>${i} ${n}</span>`).join("");
 }
 let invKey="";
 function maybeInv(){const k=JSON.stringify([S.inv,S.fish,S.hat,S.hats.length])+nearWater();if(k!==invKey){invKey=k;renderInv()}}
@@ -630,8 +650,26 @@ function makeChibi(shirtHex,hatIdx,captain){
   const rod=new THREE.Group();rod.position.set(.42,.72,.22);rod.rotation.x=-1.0;rod.visible=false;rig.add(rod);
   {const pole=new THREE.Mesh(new THREE.CylinderGeometry(.02,.035,2.4,5),SM(0x8a6a3e));pole.position.y=1.2;rod.add(pole);rod.userData.pole=pole}
   scene.add(g);
+  // hair and beard pieces, swapped from the costume menu
+  const hairM=SM(0x5b3a26),hairG=new THREE.Group(),beardG=new THREE.Group();headG.add(hairG,beardG);
+  const ball=(r,x,y,z,m)=>{const b=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),m||hairM);b.position.set(x,y,z);return b};
+  const cap=()=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.66,24,14,0,Math.PI*2,0,Math.PI*.4),hairM);m.rotation.x=-.28;m.scale.set(1.06,.97,1.02);return m};
+  function buildHair(i){hairG.clear();
+    if(i===1){hairG.add(cap());for(let k=-2;k<=2;k++){const b=ball(.13,k*.14,.33-Math.abs(k)*.03,.5);b.scale.set(1,.7,.8);hairG.add(b)}}
+    if(i===2){hairG.add(cap());for(const s of [-1,1]){hairG.add(ball(.21,s*.66,-.12,-.12));hairG.add(ball(.07,s*.56,.06,-.08,SM(0xe8604c)))}}
+    if(i===3){hairG.add(cap());for(let k=0;k<7;k++){const a=k/7*Math.PI*2,c=new THREE.Mesh(new THREE.ConeGeometry(.13,.42,6),hairM);
+      c.position.set(Math.cos(a)*.32,.55,Math.sin(a)*.32-.06);c.rotation.z=-Math.cos(a)*.7;c.rotation.x=Math.sin(a)*.7;hairG.add(c)}}
+    if(i===4){for(const th of [.25,.7,1.1])for(let k=0;k<(th<.3?3:9);k++){const ph=k/(th<.3?3:9)*Math.PI*2+th;if(th>1&&Math.sin(ph)>.4)continue;
+      hairG.add(ball(.19,Math.sin(th)*Math.cos(ph)*.6,Math.cos(th)*.6,Math.sin(th)*Math.sin(ph)*.6-.04))}}}
+  function buildBeard(i){beardG.clear();
+    if(i===1)for(const s of [-1,1]){const m=ball(.075,s*.085,-.11,.6);m.scale.set(1.6,.55,.6);m.rotation.z=s*.25;beardG.add(m)}
+    if(i===2){const b=new THREE.Mesh(new THREE.SphereGeometry(.46,20,10,0,Math.PI*2,Math.PI*.55,Math.PI*.45),hairM);b.position.set(0,-.02,.1);b.scale.set(1.16,1.05,1.02);beardG.add(b);
+      for(const s of [-1,1]){const m=ball(.07,s*.08,-.1,.61);m.scale.set(1.5,.5,.6);beardG.add(m)}}
+    if(i===3){const c=new THREE.Mesh(new THREE.ConeGeometry(.1,.3,8),hairM);c.rotation.x=Math.PI;c.position.set(0,-.55,.42);beardG.add(c)}}
   return{g,rig,headG,eyes,legs,arms,rod,hatM,ribM,walkPh:0,blinkT:1+Math.random()*3,
-    setHat(i){hatM.color.setHex(HATS[i].c);ribM.color.setHex(HATS[i].r)},
+    setHat(i){const H=HATS[i]||HATS[0];hat.visible=!H.none;if(!H.none){hatM.color.setHex(H.c);ribM.color.setHex(H.r)}},
+    setShirt(hex){shirt.color.setHex(hex)},setHair:buildHair,setBeard:buildBeard,
+    setLook(L){this.setShirt(SHIRTS[L.shirt]??SHIRTS[0]);this.setHat(L.hat|0);buildHair(L.hair|0);buildBeard(L.beard|0)},
     setRod(gold){rod.userData.pole.material.color.setHex(gold?0xf2c14e:0x8a6a3e)}};
 }
 function animChibi(ch,st,dt,t){
@@ -674,7 +712,7 @@ function placeTag(tag,x,y,z,dt){
   if(tag.bubT>0){tag.bubT-=dt;if(tag.bubT<=0)tag.bub.hidden=true}
 }
 
-const me=makeChibi(SHIRTS[S.shirt],S.hat);me.setRod(S.rod);
+const me=makeChibi(SHIRTS[S.shirt],S.hat);me.setRod(S.rod);me.setLook(S);
 const player=me.g;
 const meTag=makeTag(S.nick,true);
 const torch=new THREE.PointLight(0xffd9a0,0,9,1.8);torch.position.y=2.4;player.add(torch);
@@ -715,12 +753,11 @@ addEventListener("keydown",e=>{
   keys[e.code]=true;
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code))e.preventDefault();
   if(!started)return;
-  if(e.code==="Escape"){$("dex").hidden=true;$("trade").hidden=true;$("servers").hidden=true}
-  if(!$("dex").hidden||!$("trade").hidden||!$("servers").hidden)return;
+  if(e.code==="Escape"){$("dex").hidden=true;$("trade").hidden=true;$("servers").hidden=true;$("costume").hidden=true}
+  if(!$("dex").hidden||!$("trade").hidden||!$("servers").hidden||!$("costume").hidden)return;
   if(e.code==="KeyE")doAct();
   if(e.code==="Enter"){e.preventDefault();openChat()}
   if(e.code==="KeyB")openDex();
-  if(e.code==="Digit3")sendBottle();
   const ei=["Digit4","Digit5","Digit6","Digit7","Digit8"].indexOf(e.code);if(ei>=0&&emoteList()[ei])startEmote(emoteList()[ei].id);
   if(e.code==="Space"&&!e.repeat)doJump()});
 addEventListener("keyup",e=>{keys[e.code]=false});
@@ -744,7 +781,7 @@ let running=false;
  const rel=e=>{if(e.pointerId!==jid)return;jid=null;knob.style.transform="";joyV={x:0,y:0}};
  joy.addEventListener("pointerup",rel);joy.addEventListener("pointercancel",rel)}
 $("prompt").onclick=()=>doAct();
-$("sendBottle").onclick=()=>sendBottle();$("dexBtn").onclick=()=>{openBag(false);openDex()};
+$("dexBtn").onclick=()=>{openBag(false);openDex()};
 /* bag + collapsible island info */
 function openBag(on){$("bagPanel").hidden=!on;$("bagBtn").hidden=on;$("bagBtn").setAttribute("aria-expanded",on);if(on)renderInv()}
 $("bagBtn").onclick=()=>openBag(true);$("bagClose").onclick=()=>openBag(false);
@@ -752,7 +789,22 @@ cvs.addEventListener("pointerdown",()=>{if(!$("bagPanel").hidden)openBag(false)}
 function setHud(open){$("hud").classList.toggle("open",open);$("hudToggle").setAttribute("aria-expanded",open);$("hudToggle").setAttribute("aria-label",open?"섬 정보 접기":"섬 정보 펼치기");try{localStorage.setItem("island-hud-open",open?"1":"0")}catch(e){}}
 {let o=null;try{o=localStorage.getItem("island-hud-open")}catch(e){}setHud(o==null?!touch:o==="1")}
 $("hudToggle").onclick=()=>setHud(!$("hud").classList.contains("open"));
-$("hatBtn").onclick=()=>{if(S.hats.length<2)return;const i=S.hats.indexOf(S.hat);S.hat=S.hats[(i+1)%S.hats.length];me.setHat(S.hat);save();renderInv()};
+$("hatBtn").onclick=()=>{openBag(false);openCostume()};
+/* costume: clothes, hat, hair, beard; the character turns to face you while you pick */
+function openCostume(){
+  const el=$("costume");player.rotation.y=yaw;emo=null;
+  const row=(title,items,cur,key)=>`<div class="cRow"><b>${title}</b><div class="cOpts">${items.map((it,i)=>`<button class="cOpt ${i===cur?"on":""}" data-k="${key}" data-i="${i}" ${it.lock?"disabled":""}>${it.html}</button>`).join("")}</div></div>`;
+  const hatItems=HATS.map((h,i)=>({html:S.hats.includes(i)?h.n:`🔒 ${h.n}`,lock:!S.hats.includes(i)}));
+  el.innerHTML=`<div class="card costume"><div class="row" style="justify-content:space-between"><h3>코스튬</h3><button class="btn" id="cClose">완료</button></div>
+    ${row("옷",SHIRTS.map((c,i)=>({html:`<i style="background:#${c.toString(16).padStart(6,"0")}"></i>${SHIRT_N[i]}`})),S.shirt,"shirt")}
+    ${row("모자",hatItems,S.hat,"hat")}
+    ${row("헤어",HAIRS.map(n=>({html:n})),S.hair,"hair")}
+    ${row("수염",BEARDS.map(n=>({html:n})),S.beard,"beard")}
+    <p style="font-size:.78rem;color:var(--ink-soft)">🔒 모자는 갈매기호 선장과 물물교환하면 열려요.</p></div>`;
+  el.hidden=false;
+  $("cClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
+  el.querySelectorAll(".cOpt").forEach(b=>b.onclick=()=>{S[b.dataset.k]=+b.dataset.i;me.setLook(S);save();openCostume()});
+}
 
 /* chat */
 let say={s:"",st:0};
@@ -819,8 +871,6 @@ function doAct(){
   if(!started||busyS)return;
   if(fishS){reelIn();return}
   if(!current||!current.l.ok)return;current.it.act()}
-function sendBottle(){if(busyS||!S.inv.bottle||!nearWater())return;
-  busy(1.5,"편지 쓰는 중…",()=>{S.inv.bottle--;S.pend.push(Date.now()+rand(60,180)*1000);log("'여기 놀러 오세요'라고 써서 바다에 띄웠다.")})}
 
 /* fishing gear: a bobber flying out in an arc, then a sagging line; one for me and one per friend who fishes */
 const LINE_N=14,_tip=new THREE.Vector3();
@@ -868,8 +918,7 @@ function reelIn(){
   if(fishS.phase==="wait"){stopFishing("너무 일찍 당겼다. 물고기가 도망갔다.");return}
   if(fishS.phase==="bite"){
     const f=rollFish();stopFishing("");
-    if(f.id==="bottle"){S.inv.bottle++;log("빈 병이 걸려 올라왔다. 편지 쓸 수 있겠다.");}
-    else{const cm=f.cm?Math.round(f.cm[0]+Math.random()*(f.cm[1]-f.cm[0])):0;
+    {const cm=f.cm?Math.round(f.cm[0]+Math.random()*(f.cm[1]-f.cm[0])):0;
       addItem(f.id,1);const d=S.dex[f.id]||(S.dex[f.id]={c:0,best:0});const first=!d.c;d.c++;if(cm>d.best)d.best=cm;
       log(f.junk?`${f.n}이 걸려 올라왔다…`:`${f.ic} ${f.n}${cm?` ${cm}cm`:""}을 낚았다!${first?" (도감에 새로 등록)":""}`,f.legend?"gold":"");
       showBubble(meTag,f.ic,true,2.2);
@@ -923,7 +972,8 @@ function upRemote(p){
   r.tx=num(pr.x,r.tx,200);r.tz=num(pr.z,r.tz,200);r.tr=num(pr.r,0,10);r.a=String(pr.a||"").slice(0,8);
   r.tj=num(pr.j,0,6);r.bx=Number.isFinite(pr.bx)?num(pr.bx,0,300):NaN;r.bz=Number.isFinite(pr.bz)?num(pr.bz,0,300):NaN;
   const nm=String(pr.n||"누군가").slice(0,12);if(r.tag.n.textContent!==nm)r.tag.n.textContent=nm;
-  const hat=Math.abs(num(pr.h,0,99)|0)%HATS.length;if(hat!==r.hat){r.hat=hat;r.setHat(hat)}
+  const look={shirt:Math.abs(num(pr.c,0,99)|0)%SHIRTS.length,hat:Math.abs(num(pr.h,0,99)|0)%HATS.length,hair:Math.abs(num(pr.hr,0,99)|0)%HAIRS.length,beard:Math.abs(num(pr.bd,0,99)|0)%BEARDS.length};
+  const lk=JSON.stringify(look);if(lk!==r.look){r.look=lk;r.hat=look.hat;r.setLook(look)}
   if(pr.et!==r.et||(pr.e||null)!==(r.emo?r.emo.id:null)){r.et=pr.et;const id=pr.e?String(pr.e).slice(0,8):null,def=EMOTES.find(x=>x.id===id);
     r.emo=id?{id,t:0}:null;r.emoDur=id==="sit"||id==="lie"?1e9:def?def.dur:3;if(r.emo&&EMO_ICON[id])showBubble(r.tag,EMO_ICON[id],true)}
   if(pr.st!==r.st){const first=r.st===0&&Date.now()-num(pr.st,0,1e15)>8000;r.st=pr.st;
@@ -968,7 +1018,7 @@ function openServers(){
 }
 function sendPresence(){
   if(!chan||!online())return;
-  const P={n:S.nick,c:S.shirt,h:S.hat,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
+  const P={n:S.nick,c:S.shirt,h:S.hat,hr:S.hair,bd:S.beard,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
     a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fireUntil,
     j:+liftY.toFixed(2)};
   if(fishS){P.bx=+fishS.bx.toFixed(2);P.bz=+fishS.bz.toFixed(2)}
@@ -991,14 +1041,13 @@ function timeNow(){return (Date.now()/1000%DAY_LEN)/DAY_LEN}
 function hourNow(){return (6+timeNow()*24)%24}
 let last=performance.now(),saveT=0,mapT=1,clockKey="";
 function update(dt,t){
-  const playing=started&&$("dex").hidden&&$("trade").hidden&&$("servers").hidden;
+  const playing=started&&$("dex").hidden&&$("trade").hidden&&$("servers").hidden&&$("costume").hidden;
   const time=timeNow();
-  /* respawns & pending bottles */
+  /* respawns */
   for(const p of palms)if(p.cd>0)p.cd-=dt;
   for(const w of woodPiles)if(w.cd>0){w.cd-=dt;if(w.cd<=0)w.g.visible=true}
   for(const b of bushes)if(b.cd>0){b.cd-=dt;if(b.cd<=0)b.m.scale.set(1.2,.8,1.1)}
   for(const s of shells)if(s.cd>0){s.cd-=dt;if(s.cd<=0)s.m.visible=true}
-  if(S.pend.length&&Date.now()>S.pend[0]){S.pend.shift();const i=rand(0,BOTTLE_REPLIES.length-1);if(i===3)S.inv.shell+=3;log(BOTTLE_REPLIES[i]);save()}
   /* busy */
   if(busyS){busyS.t+=dt;$("busyBar").style.width=Math.min(100,busyS.t/busyS.dur*100)+"%";
     if(busyS.t>=busyS.dur){const f=busyS.fn;busyS=null;$("busy").hidden=true;f();renderInv();save()}}
@@ -1049,11 +1098,13 @@ function update(dt,t){
     if(r.fire>remoteFire)remoteFire=r.fire});
   /* camera */
   const tgt=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);
-  const cx=tgt.x+Math.sin(yaw)*Math.cos(pitch)*dist,cz=tgt.z+Math.cos(yaw)*Math.cos(pitch)*dist;
-  let cy=tgt.y+Math.sin(pitch)*dist;cy=Math.max(cy,groundH(cx,cz)+.6,.8);
+  // in the costume menu the camera comes close and frames the character above the panel
+  const dressing=!$("costume").hidden,cD=dressing?4.6:dist,cP=dressing?.1:pitch;
+  const cx=tgt.x+Math.sin(yaw)*Math.cos(cP)*cD,cz=tgt.z+Math.cos(yaw)*Math.cos(cP)*cD;
+  let cy=tgt.y+Math.sin(cP)*cD;cy=Math.max(cy,groundH(cx,cz)+.6,.8);
   camera.position.lerp(new THREE.Vector3(cx,cy,cz),Math.min(1,dt*8));
   // below the shoulder line the camera tips its gaze up to the sky (for sunsets and auroras)
-  const lookUp=Math.max(0,.15-pitch)*22;camera.lookAt(tgt.x,tgt.y+lookUp,tgt.z);
+  const lookUp=dressing?-1.5:Math.max(0,.15-pitch)*22;camera.lookAt(tgt.x,tgt.y+lookUp,tgt.z);
   /* sky */
   const a=time*Math.PI*2,elev=Math.sin(a),hr=hourNow();
   const wn=weatherNow(),cl=wn.cloud,rn=wn.rain;W_NOW=wn;
