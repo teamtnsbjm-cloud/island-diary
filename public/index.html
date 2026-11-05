@@ -204,7 +204,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="title" class="overlay">
   <div class="card">
     <h2>무인도 일기</h2>
-    <p>할 일은 없다. 원시인 옷 한 벌로 시작해서 나뭇가지와 조개를 줍고, 모닥불 앞에서 멍때리면 된다. 가끔 들르는 상선 '갈매기호' 선장과 물물교환하면 낚싯대와 새 옷이 생기고, 연못과 바다에서 물고기를 낚을 수 있다. 친구가 들어오면 같은 섬에서 만난다.</p>
+    <p>할 일은 없다. 원시인 옷 한 벌로 시작해서 나뭇가지와 조개를 줍고, 모닥불 앞에서 멍때리면 된다. 모은 재료를 교환소에서 낚싯대와 새 옷으로 바꾸고, 연못과 바다에서 물고기를 낚는다. 가끔 들르는 상선 '갈매기호'에서는 모자와 꾸미기를 바꿀 수 있다. 친구가 들어오면 같은 섬에서 만난다.</p>
     <label class="field">섬에서 쓸 이름<input id="nickIn" maxlength="12"></label>
     <div class="keys" id="keys"></div>
     <div class="row"><button class="btn main" id="go">섬으로 가기</button></div>
@@ -1013,32 +1013,32 @@ function doExchange(key){
   if(key==="rod")U.rod=true;else if(key[0]==="o")U.o.push(n);else if(key[0]==="h")U.h.push(n);else U.b|=1<<n;
   save();renderInv();log(`${x.ic} ${x.n} 교환 완료!`,"gold");beep(659,.15);beep(880,.25,"triangle",.15,.12);
   if(key==="rod")toast("🎣 낚싯대가 생겼어요! 물가에서 낚시해 보세요");else if(key[0]!=="r")toast("👕 가방 → 코스튬에서 바꿔 입을 수 있어요");
-  if(!shipNow().here){$("trade").hidden=true;return}openTrade()}
+  openGuide(true)}
 function openGuide(stay){
   const el=$("guideWin");if(!stay&&!el.hidden){el.hidden=true;$("guideBtn").setAttribute("aria-expanded","false");return}
-  const tabs=`<div class="tabs"><button class="btn ${guideTab==="rules"?"on":""}" data-tab="rules">📜 규칙</button><button class="btn ${guideTab==="ex"?"on":""}" data-tab="ex">🔁 교환 목록</button></div>`;
+  const tabs=`<div class="tabs"><button class="btn ${guideTab==="rules"?"on":""}" data-tab="rules">📜 규칙</button><button class="btn ${guideTab==="ex"?"on":""}" data-tab="ex">🔁 교환소</button></div>`;
   const rules=`<ul class="rules">
     <li>🏝️ <b>할 일은 없어요.</b> 걷고, 줍고, 낚시하고, 멍때리면 돼요. 친구가 들어오면 같은 섬에서 만나요.</li>
     <li>🪵 나뭇가지 · 🌿 야자잎 · 🥥 코코넛 · 🐚 조개는 가까이 가면 나오는 버튼으로 주워요. 시간이 지나면 다시 생겨요.</li>
-    <li>🎣 <b>낚시</b>는 선장에게 낚싯대(나무 5 + 조개 3)를 받아야 할 수 있어요. 바다·선착장·연못에서 찌를 던지고, ❗ 입질이 오면 바로 당겨요.</li>
+    <li>🎣 <b>낚시</b>는 🔁 교환소에서 낚싯대(나무 5 + 조개 3)를 만들어야 할 수 있어요. 바다·선착장·연못에서 찌를 던지고, ❗ 입질이 오면 바로 당겨요.</li>
     <li>🐟 바다와 🪷 연못은 사는 물고기가 달라요. 🌙 밤에만 나오는 물고기, ✨ 전설의 물고기도 있어요.</li>
     <li>🔥 모닥불은 나무 3개로 피워요. 불 옆에서 생선을 구워 먹을 수 있어요.</li>
-    <li>👕 처음엔 <b>원시인</b> 옷뿐이에요. 낚싯대·옷·헤어·수염은 갈매기호 선장과 교환해서 열어요. 원시인 🪨 거미 히어로 🕸️ 양복 🔫 은 특별 기술이 있어요.</li>
-    <li>⛵ <b>갈매기호</b>는 가끔 와요. 배가 오면 선착장 끝의 선장에게 가서 물물교환해요. 필요한 재료는 🔁 교환 탭에서 미리 볼 수 있어요.</li>
+    <li>👕 처음엔 <b>원시인</b> 옷뿐이에요. 다른 옷·헤어·수염은 🔁 교환소에서 열어요. 원시인 🪨 거미 히어로 🕸️ 양복 🔫 은 특별 기술이 있어요.</li>
+    <li>⛵ <b>갈매기호</b>는 가끔 와요. 선착장에서 선장과 물물교환하면 모자·해먹 같은 꾸미기가 생겨요.</li>
     <li>📦 꾸미기는 가방 → 인벤토리에서 설치하고 수거해요. 내가 놓은 물건은 모두에게 보여요.</li>
     <li>🌅 날씨는 계속 바뀌어요. 저녁엔 석양, 밤엔 별똥별과 오로라를 기다려 봐요.</li></ul>`;
   const sn=shipNow();
-  const ex=`<div class="offer" style="grid-template-columns:1fr"><b>⛵ 교환하는 법</b><small style="grid-column:1">갈매기호가 오면 선착장 끝의 선장에게 가서 "선장과 물물교환"을 눌러요. 아래 재료를 미리 모아 두세요.</small>
-      <small style="grid-column:1;color:${sn.here?"var(--coral)":"var(--ink-soft)"};font-weight:${sn.here?700:400}">${sn.here?`지금 배가 와 있어요! (${Math.round(sn.left)}초 남음)`:nextShipText()}</small></div>
-    <b style="font-family:var(--display);font-size:1.05rem">언제나 바꿔 주는 것</b>
-    ${EXCHANGE.map(x=>{const done=unlocked(x.key);
-      return`<div class="offer ${done?"done":""}" style="grid-template-columns:1fr"><b>${x.ic} ${x.n}${done?" · ✓ 열림":""}</b><span class="give">${done?"이미 갖고 있어요":costTxt(x.give)}</span>${x.d?`<small>${x.d}</small>`:""}</div>`}).join("")}
-    <b style="font-family:var(--display);font-size:1.05rem">가끔 가져오는 것 (날마다 4가지씩 바뀌어요)</b>
+  const ex=`<p style="font-size:.82rem;color:var(--ink-soft);margin:0">언제든 교환할 수 있어요. 모은 재료로 바꿔요.</p>
+    ${EXCHANGE.map(x=>{const done=unlocked(x.key),ok=!done&&Object.entries(x.give).every(([id,n])=>have(id)>=n);
+      return`<div class="offer ${done?"done":""}"><b>${x.ic} ${x.n}</b><span class="give">${done?"✓ 열림":costTxt(x.give)}</span>${x.d?`<small>${x.d}</small>`:"<small></small>"}<button class="btn ${ok?"main":""}" data-ex="${x.key}" ${ok?"":"disabled"}>${done?"완료":"교환"}</button></div>`}).join("")}
+    <b style="font-family:var(--display);font-size:1.05rem">⛵ 갈매기호가 가끔 가져오는 것</b>
+    <small style="color:${sn.here?"var(--coral)":"var(--ink-soft)"};font-weight:${sn.here?700:400}">${sn.here?`지금 배가 와 있어요! 선착장 끝의 선장에게 가 보세요 (${Math.round(sn.left)}초 남음)`:nextShipText()+" · 날마다 4가지씩 바뀌어요"}</small>
     ${POOL.map(o=>`<div class="offer done" style="grid-template-columns:1fr"><b>${o.n}</b><span class="give">${Object.entries(o.give).map(([id,n])=>`${itemName(id)} ${n}`).join(" + ")}</span><small>${o.d}</small></div>`).join("")}`;
   el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3>📖 규칙서</h3><button class="btn" id="gClose">닫기</button></div>${tabs}${guideTab==="rules"?rules:ex}</div>`;
   el.hidden=false;$("guideBtn").setAttribute("aria-expanded","true");
   $("gClose").onclick=()=>{el.hidden=true;$("guideBtn").setAttribute("aria-expanded","false")};el.onclick=e=>{if(e.target===el)el.hidden=true};
-  el.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{guideTab=b.dataset.tab;openGuide(true)})}
+  el.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{guideTab=b.dataset.tab;openGuide(true)});
+  el.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>doExchange(b.dataset.ex))}
 $("guideBtn").onclick=()=>openGuide(false);
 /* ✏️ rename: small inline box under the clock */
 $("nameBtn").onclick=()=>{const f=$("nameForm");if(!f.hidden){f.hidden=true;return}f.hidden=false;$("nameIn").value=S.nick;$("nameIn").focus();$("nameIn").select()};
@@ -1065,7 +1065,7 @@ function openCostume(){
     ${row("헤어",HAIRS.map((n,i)=>({html:unlocked("h"+i)?n:`🔒 ${n}`,lock:!unlocked("h"+i)})),S.hair,"hair")}
     <div class="cRow"><b>수염 <small style="font-family:var(--body);font-weight:400;font-size:.72rem;color:var(--ink-soft)">여러 개 같이 · 다시 누르면 빼기</small></b><div class="cOpts">
       ${BEARDS.map((n,i)=>unlocked("b"+i)?`<button class="cOpt ${S.beard&(1<<i)?"on":""}" data-beard="${1<<i}">${n}</button>`:`<button class="cOpt" disabled>🔒 ${n}</button>`).join("")}</div></div>
-    <p style="font-size:.76rem;color:var(--ink-soft);margin:0">🔒 잠긴 것은 갈매기호 선장과 교환해서 열어요 (📖 규칙서에 재료가 있어요) · 🦴 원시인 🕷️ 거미 히어로 🤵 양복은 특별 기술이 있어요</p></div>`;
+    <p style="font-size:.76rem;color:var(--ink-soft);margin:0">🔒 옷·헤어·수염은 📖 규칙서의 교환소에서, 모자는 갈매기호에서 열어요 · 🦴 원시인 🕷️ 거미 히어로 🤵 양복은 특별 기술이 있어요</p></div>`;
   el.hidden=false;
   $("cClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
   el.querySelectorAll(".cOpt[data-k]").forEach(b=>b.onclick=()=>{S[b.dataset.k]=+b.dataset.i;me.setLook(S);save();renderEmotes();openCostume()});
@@ -1208,7 +1208,7 @@ let jumpY=0,jumpV=0,liftY=0;
 function doJump(){if(!started||busyS||jumpY>0||jumpV>0)return;if(fishS)stopFishing("");if(seat){seat=null;emo=null}
   if(emo&&emo.id!=="sit")emo=null;jumpV=8.2;jumpY=.001;beep(520,.1,"triangle",.1);beep(780,.08,"triangle",.06,.06)}
 function startFishing(){
-  if(!S.unlock.rod){toast("낚싯대가 필요해요. 갈매기호가 오면 선장에게 나무 5 + 조개 3으로 바꿔요");return}
+  if(!S.unlock.rod){toast("낚싯대가 필요해요. 📖 규칙서 → 교환소에서 나무 5 + 조개 3으로 바꿔요");return}
   emo=null;seat=null;const px=player.position.x,pz=player.position.z,pr=pierAt(px,pz),fresh=byPond();
   let dx,dz,bx,bz;
   if(fresh){const tx=POND.x-px,tz=POND.z-pz,l=Math.hypot(tx,tz)||1;dx=tx/l;dz=tz/l;const d=Math.max(3,Math.min(l-1.5,l*.75));bx=px+dx*d;bz=pz+dz*d}
@@ -1259,12 +1259,9 @@ function openTrade(){
     ${offers.length?offers.map(i=>{const o=POOL[i],ok=Object.entries(o.give).every(([id,n])=>have(id)>=n),was=done.includes(i);
       return`<div class="offer"><b>${o.n}</b><span class="give">내는 것: ${giveTxt(o.give)}</span><small>${o.d}</small><button class="btn ${ok&&!was?"main":""}" data-tr="${i}" ${ok&&!was?"":"disabled"}>${was?"교환함":"교환"}</button></div>`}).join("")
       :`<p>"오늘은 더 줄 게 없네. 다음에 또 올게!"</p>`}
-    <b style="font-family:var(--display);font-size:1.1rem">언제나 바꿔 주는 것</b>
-    ${EXCHANGE.filter(x=>!unlocked(x.key)).map(x=>{const ok=Object.entries(x.give).every(([id,n])=>have(id)>=n);
-      return`<div class="offer"><b>${x.ic} ${x.n}</b><span class="give">내는 것: ${giveTxt(x.give)}</span>${x.d?`<small>${x.d}</small>`:"<small></small>"}<button class="btn ${ok?"main":""}" data-ex="${x.key}" ${ok?"":"disabled"}>교환</button></div>`}).join("")||`<p>"이미 다 갖고 있구먼!"</p>`}</div>`;
+    <p style="font-size:.8rem;color:var(--ink-soft)">낚싯대와 옷·헤어·수염은 📖 규칙서 → 교환소에서 언제든 바꿀 수 있어요.</p></div>`;
   el.hidden=false;$("trClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
   el.querySelectorAll("[data-tr]").forEach(b=>b.onclick=()=>doTrade(+b.dataset.tr,sn.d));
-  el.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>doExchange(b.dataset.ex));
 }
 function doTrade(i,d){
   const o=POOL[i];if(!Object.entries(o.give).every(([id,n])=>have(id)>=n))return;
@@ -1505,7 +1502,7 @@ function update(dt,t){
   current=null;
   if(playing&&!busyS&&!fishS){let bd=1e9;
     for(const it of [...items,...decorSpots().map(spotItem)]){const d=Math.hypot(it.x-player.position.x,it.z-player.position.z);if(d<it.r&&d<bd){const l=it.label();if(l){current={it,l};bd=d}}}
-    if(!current&&nearWater())current={it:fishItem,l:S.unlock.rod?{t:"낚시하기",ok:true}:{t:"낚싯대가 필요해요 · 갈매기호 선장",ok:false}}}
+    if(!current&&nearWater())current={it:fishItem,l:S.unlock.rod?{t:"낚시하기",ok:true}:{t:"낚싯대가 필요해요 · 📖 교환소",ok:false}}}
   const pr=$("prompt");
   if(typing()||!$("chatForm").hidden)pr.hidden=true;
   else if(fishS){pr.hidden=false;const bite=fishS.phase==="bite";const html=(touch?"":"<kbd>E</kbd>")+(bite?"지금 당겨!":"찌를 보는 중… (움직이면 그만두기)");if(pr.innerHTML!==html)pr.innerHTML=html;pr.classList.toggle("bite",bite);pr.classList.remove("no")}
