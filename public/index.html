@@ -121,8 +121,9 @@ body.touch #log{top:calc(var(--st) + 104px)}
 .field{display:flex;flex-direction:column;gap:3px;font-size:.85rem;color:var(--ink-soft)}
 .field input{font:inherit;font-size:1.05rem;border:1.5px solid var(--ink);border-radius:8px;padding:6px 10px;background:#fffaf0;color:var(--ink);-webkit-user-select:text;user-select:text}
 #costume{align-items:flex-end;background:linear-gradient(transparent 35%,rgba(15,30,40,.25))}
-#costume:not([hidden])~#emotes,body:has(#costume:not([hidden])) #emotes{display:none}
-.card.costume{max-height:58%;gap:8px;padding:12px 14px}
+body:has(#costume:not([hidden])) :is(#emotes,#joy,#runBtn,#jumpBtn,#prompt,#log){display:none!important}
+.card.costume{max-height:56%;gap:7px;padding:10px 14px;background:rgba(246,238,219,.62);box-shadow:3px 3px 0 rgba(43,42,38,.5);-webkit-backdrop-filter:none;backdrop-filter:none}
+.card.costume .cOpt:not(.on){background:rgba(255,250,240,.78)}
 .cRow{display:flex;flex-direction:column;gap:4px}
 .cRow>b{font-family:var(--display);font-size:1.1rem}
 .cOpts{display:flex;flex-wrap:wrap;gap:5px}
@@ -249,9 +250,16 @@ function itemName(id){return RES_N[id]||FISH_BY[id]?.n||id}
 const HATS=[{n:"밀짚모자",c:0xf4d27a,r:0xe8604c},{n:"분홍 모자",c:0xffb3c7,r:0xffffff},{n:"하늘색 모자",c:0x9fd3f0,r:0x2f7fa0},{n:"민트 모자",c:0xa8e6cf,r:0x3f8a5a},{n:"선장 모자",c:0xffffff,r:0x1f3a5f},{n:"모자 없음",c:0,r:0,none:1}];
 const FREE_HATS=[0,5];
 const SHIRTS=[0xff9f8a,0x8fd3a8,0xffd166,0xb5a8ff,0x7ec3e6,0xffb3c7,0xf6f1e6,0x3d4a5c];
-const SHIRT_N=["산호","민트","망고","라벤더","바다","복숭아","하양","밤바다"];
+// outfits replace plain shirt colours; "skin" means bare arms or legs
+const OUTFITS=[
+  {n:"빨간 티",ic:"👕",body:0xe8453c,sleeve:0xe8453c,pants:0x7ec3e6},
+  {n:"흰 나시",ic:"🎽",body:0xf8f6f0,sleeve:"skin",pants:0x7ec3e6},
+  {n:"공주님",ic:"👗",body:0xffa6cf,sleeve:"skin",pants:0xfff0f6,band:0xffe08a,extra:"princess"},
+  {n:"축구복",ic:"⚽",body:0xd7262e,sleeve:0xd7262e,pants:0xffffff,extra:"soccer"},
+  {n:"거미 히어로",ic:"🕷️",body:0xd62828,sleeve:0xd62828,pants:0x2453c4,band:0x2453c4,extra:"spider",skill:"web"},
+  {n:"원시인",ic:"🦴",body:0x8a5a2e,sleeve:"skin",pants:"skin",extra:"cave",skill:"rock"}];
 const HAIRS=["기본","앞머리","양갈래","삐죽머리","뽀글머리"];
-const BEARDS=["없음","콧수염","턱수염","염소수염"];
+const BEARDS=["콧수염","턱수염","염소수염"]; // bit 1, 2, 4
 const POOL=[
   {give:{mackerel:3},get:{decor:"hammock"},n:"해먹",d:"모닥불 옆에 걸어 줄게. 누워서 파도 소리 듣기 좋아."},
   {give:{coconut:5},get:{hat:1},n:"분홍 모자",d:"요즘 섬 패션은 분홍이래."},
@@ -290,7 +298,7 @@ function myDay(){const startDay=Math.floor(S.firstMs/1000/DAY_LEN);return Math.m
 function startSpot(){S.px=0;S.pz=rAt(Math.PI/2,1.1)}
 if(S.px==null)startSpot();
 for(const h of FREE_HATS)if(!S.hats.includes(h))S.hats.push(h);
-S.hair=S.hair|0;S.beard=S.beard|0;if(!(S.shirt>=0&&S.shirt<SHIRTS.length))S.shirt=0;
+S.hair=S.hair|0;if(!S.bm){S.beard=[0,1,2,4][S.beard|0]||0;S.bm=1}S.beard&=7;if(!(S.shirt>=0&&S.shirt<OUTFITS.length))S.shirt=0;
 function have(id){return (id in S.inv?S.inv[id]:S.fish[id])||0}
 function addItem(id,n){if(id in RES_N)S.inv[id]=(S.inv[id]||0)+n;else S.fish[id]=(S.fish[id]||0)+n}
 
@@ -618,19 +626,19 @@ items.push(crabItem);
 /* ---------- chibi (me, friends, captain) ---------- */
 function makeChibi(shirtHex,hatIdx,captain){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);
-  const skin=SM(captain?0xc9a27e:0xffdcc0),shirt=SM(shirtHex),stripe=SM(0xfff4e6),pants=SM(captain?0x1f3a5f:0x7ec3e6),hatM=SM(HATS[hatIdx].c),ribM=SM(HATS[hatIdx].r);
+  const skin=SM(captain?0xc9a27e:0xffdcc0),shirt=SM(shirtHex),sleeve=SM(shirtHex),stripe=SM(0xfff4e6),pants=SM(captain?0x1f3a5f:0x7ec3e6),hatM=SM(HATS[hatIdx].c),ribM=SM(HATS[hatIdx].r);
   const ink=new THREE.MeshBasicMaterial({color:0x2b2a26}),shine=new THREE.MeshBasicMaterial({color:0xffffff}),blush=new THREE.MeshBasicMaterial({color:0xff8fa3,transparent:true,opacity:.65});
   const body=sh(new THREE.Mesh(new THREE.SphereGeometry(.4,18,14),shirt));body.scale.set(1,1.08,.92);body.position.y=.78;rig.add(body);
   const band=new THREE.Mesh(new THREE.TorusGeometry(.385,.045,8,24),stripe);band.rotation.x=Math.PI/2;band.position.y=.82;band.scale.set(1,.92,1);rig.add(band);
   const headG=new THREE.Group();headG.position.y=1.58;rig.add(headG);
   const head=sh(new THREE.Mesh(new THREE.SphereGeometry(.62,24,18),skin));head.scale.set(1.06,.96,1);headG.add(head);
-  const eyes=[];
+  const eyes=[],ears=[],face=[];
   for(const s of [-1,1]){
     const e=new THREE.Mesh(new THREE.SphereGeometry(.1,12,10),ink);e.scale.set(.85,1.2,.5);e.position.set(s*.22,-.02,.57);headG.add(e);eyes.push(e);
     const h=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),shine);h.position.set(s*.22+.035,.04,.62);headG.add(h);eyes.push(h);
-    const b=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),blush);b.scale.set(1,.55,.3);b.position.set(s*.38,-.18,.5);headG.add(b);
-    const ear=new THREE.Mesh(new THREE.SphereGeometry(captain?.16:.12,10,8),skin);ear.position.set(s*.62,captain?.38:-.05,0);headG.add(ear)}
-  const mouth=new THREE.Mesh(new THREE.TorusGeometry(.055,.016,6,14,Math.PI),ink);mouth.rotation.z=Math.PI;mouth.position.set(0,-.17,.6);headG.add(mouth);
+    const b=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),blush);b.scale.set(1,.55,.3);b.position.set(s*.38,-.18,.5);headG.add(b);face.push(e,h,b);
+    const ear=new THREE.Mesh(new THREE.SphereGeometry(captain?.16:.12,10,8),skin);ear.position.set(s*.62,captain?.38:-.05,0);headG.add(ear);ears.push(ear)}
+  const mouth=new THREE.Mesh(new THREE.TorusGeometry(.055,.016,6,14,Math.PI),ink);mouth.rotation.z=Math.PI;mouth.position.set(0,-.17,.6);headG.add(mouth);face.push(mouth);
   if(captain){const nose=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),ink);nose.position.set(0,-.07,.63);headG.add(nose);
     for(const s of [-1,1])for(let k=0;k<2;k++){const w=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.35,3),ink);w.rotation.z=Math.PI/2+s*(k?.15:-.1);w.position.set(s*.3,-.12-k*.05,.55);headG.add(w)}}
   const hat=new THREE.Group();hat.position.y=.42;hat.rotation.z=.12;headG.add(hat);
@@ -644,8 +652,8 @@ function makeChibi(shirtHex,hatIdx,captain){
     const foot=sh(new THREE.Mesh(new THREE.SphereGeometry(.13,12,10),SM(0xfff4e6)));foot.scale.set(1,.6,1.3);foot.position.set(0,-.34,.05);piv.add(foot);
     rig.add(piv);legs.push(piv);
     const ap=new THREE.Group();ap.position.set(s*.38,1.0,0);
-    const a=sh(new THREE.Mesh(new THREE.SphereGeometry(.11,12,10),shirt));a.scale.set(1,1.7,1);a.position.y=-.15;ap.add(a);
-    const hand=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),skin);hand.position.y=-.33;ap.add(hand);
+    const a=sh(new THREE.Mesh(new THREE.SphereGeometry(.11,12,10),sleeve));a.scale.set(1,1.7,1);a.position.y=-.15;ap.add(a);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),skin);hand.position.y=-.33;ap.add(hand);ap.userData.hand=hand;
     rig.add(ap);arms.push(ap)}
   const rod=new THREE.Group();rod.position.set(.42,.72,.22);rod.rotation.x=-1.0;rod.visible=false;rig.add(rod);
   {const pole=new THREE.Mesh(new THREE.CylinderGeometry(.02,.035,2.4,5),SM(0x8a6a3e));pole.position.y=1.2;rod.add(pole);rod.userData.pole=pole}
@@ -661,15 +669,53 @@ function makeChibi(shirtHex,hatIdx,captain){
       c.position.set(Math.cos(a)*.32,.55,Math.sin(a)*.32-.06);c.rotation.z=-Math.cos(a)*.7;c.rotation.x=Math.sin(a)*.7;hairG.add(c)}}
     if(i===4){for(const th of [.25,.7,1.1])for(let k=0;k<(th<.3?3:9);k++){const ph=k/(th<.3?3:9)*Math.PI*2+th;if(th>1&&Math.sin(ph)>.4)continue;
       hairG.add(ball(.19,Math.sin(th)*Math.cos(ph)*.6,Math.cos(th)*.6,Math.sin(th)*Math.sin(ph)*.6-.04))}}}
-  function buildBeard(i){beardG.clear();
-    if(i===1)for(const s of [-1,1]){const m=ball(.075,s*.085,-.11,.6);m.scale.set(1.6,.55,.6);m.rotation.z=s*.25;beardG.add(m)}
-    if(i===2){const b=new THREE.Mesh(new THREE.SphereGeometry(.46,20,10,0,Math.PI*2,Math.PI*.55,Math.PI*.45),hairM);b.position.set(0,-.02,.1);b.scale.set(1.16,1.05,1.02);beardG.add(b);
-      for(const s of [-1,1]){const m=ball(.07,s*.08,-.1,.61);m.scale.set(1.5,.5,.6);beardG.add(m)}}
-    if(i===3){const c=new THREE.Mesh(new THREE.ConeGeometry(.1,.3,8),hairM);c.rotation.x=Math.PI;c.position.set(0,-.55,.42);beardG.add(c)}}
+  // beards stack: bit 1 moustache, bit 2 full beard, bit 4 goatee
+  function buildBeard(mask){beardG.clear();
+    if(mask&1)for(const s of [-1,1]){const m=ball(.075,s*.085,-.11,.6);m.scale.set(1.6,.55,.6);m.rotation.z=s*.25;beardG.add(m)}
+    if(mask&2){const b=new THREE.Mesh(new THREE.SphereGeometry(.46,20,10,0,Math.PI*2,Math.PI*.55,Math.PI*.45),hairM);b.position.set(0,-.02,.1);b.scale.set(1.16,1.05,1.02);beardG.add(b)}
+    if(mask&4){const c=new THREE.Mesh(new THREE.ConeGeometry(.1,.3,8),hairM);c.rotation.x=Math.PI;c.position.set(0,-.55,.42);beardG.add(c)}}
+  // outfit extras on the body and the head
+  const fitG=new THREE.Group(),headFit=new THREE.Group();rig.add(fitG);headG.add(headFit);
+  const black=SM(0x1b1b1f),white=SM(0xffffff),gold=SM(0xf2c14e);
+  let fitKind="",tiara=null;
+  function buildFit(o){fitG.clear();headFit.clear();tiara=null;fitKind=o.extra||"";
+    if(fitKind==="princess"){
+      const sk=sh(new THREE.Mesh(new THREE.CylinderGeometry(.34,.64,.62,22,1,true),SM(o.body)));sk.material.side=THREE.DoubleSide;sk.position.y=.5;fitG.add(sk);
+      const hem=new THREE.Mesh(new THREE.TorusGeometry(.63,.05,8,26),white);hem.rotation.x=Math.PI/2;hem.position.y=.2;fitG.add(hem);
+      for(const s of [-1,1]){const p=ball(.15,s*.37,1.05,0,SM(o.body));p.scale.set(1,.85,1);fitG.add(p)}
+      tiara=new THREE.Group();tiara.position.set(0,.6,.08);tiara.rotation.x=-.3;tiara.scale.setScalar(1.15);headFit.add(tiara);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.035,6,20,Math.PI),gold);ring.rotation.z=0;tiara.add(ring);
+      for(const x of [-.2,0,.2]){const c=new THREE.Mesh(new THREE.ConeGeometry(.05,.16,5),gold);c.position.set(x,.08+(x?0:.05)+.18,0);tiara.add(c);tiara.add(ball(.04,x,.05+.18+(x?0:.05),.02,SM(x?0x8fd3ff:0xff6b9a)))}}
+    if(fitKind==="soccer"){
+      const col=new THREE.Mesh(new THREE.TorusGeometry(.2,.035,6,18),white);col.rotation.x=Math.PI/2;col.position.y=1.12;fitG.add(col);
+      const num=new THREE.Mesh(new THREE.PlaneGeometry(.22,.26),white);num.position.set(0,.85,-.37);num.rotation.y=Math.PI;fitG.add(num);
+      for(const s of [-1,1]){const st=new THREE.Mesh(new THREE.BoxGeometry(.03,.4,.3),white);st.position.set(s*.4,.8,0);fitG.add(st)}}
+    if(fitKind==="spider"){
+      // chest emblem and web lines on the suit, a full mask with big white eyes
+      const em=ball(.06,0,.92,.38,black);em.scale.set(.8,1.2,.5);fitG.add(em);
+      for(const s of [-1,1])for(let k=0;k<4;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.2,3),black);l.position.set(s*.07,.95-k*.04,.385);l.rotation.z=s*(1.1-k*.35);fitG.add(l)}
+      for(const y of [.6,.78,.96]){const r=new THREE.Mesh(new THREE.TorusGeometry(.39-(Math.abs(y-.78))*.4,.006,4,28),black);r.rotation.x=Math.PI/2;r.position.y=y;fitG.add(r)}
+      const MR=.68,MS=[1.1,.97,1.06];
+      const mask=sh(new THREE.Mesh(new THREE.SphereGeometry(MR,26,18),SM(o.body)));mask.scale.set(...MS);headFit.add(mask);
+      for(const s of [-1,1]){const rim=ball(.17,s*.25,.02,.66,black);rim.scale.set(1,1.25,.3);rim.rotation.z=s*.5;headFit.add(rim);
+        const lens=ball(.14,s*.25,.02,.69,white);lens.scale.set(1,1.2,.25);lens.rotation.z=s*.5;headFit.add(lens)}
+      for(let k=0;k<5;k++){const r=new THREE.Mesh(new THREE.TorusGeometry(MR+.006,.006,4,30),black);r.rotation.y=k/5*Math.PI;r.scale.set(...MS);headFit.add(r)}
+      for(const y of [-.32,0,.32]){const r=new THREE.Mesh(new THREE.TorusGeometry(Math.sqrt((MR+.006)**2-(y/MS[1])**2),.006,4,30),black);r.rotation.x=Math.PI/2;r.position.y=y;r.scale.set(MS[0],MS[2],1);headFit.add(r)}}
+    if(fitKind==="cave"){
+      const fur=SM(0x6e4522);
+      for(let k=0;k<14;k++){const a=k/14*Math.PI*2,c=new THREE.Mesh(new THREE.ConeGeometry(.09,.2,4),SM(o.body));c.rotation.x=Math.PI;c.position.set(Math.cos(a)*.36,.46,Math.sin(a)*.33);fitG.add(c)}
+      for(const [x,y,z] of [[.18,.95,.33],[-.22,.7,.3],[.25,.62,-.3],[-.1,1.0,-.33]]){const sp=ball(.06,x,y,z,fur);sp.scale.z=.4;fitG.add(sp)}
+      const strap=new THREE.Mesh(new THREE.TorusGeometry(.33,.05,6,20,Math.PI),SM(o.body));strap.position.set(.05,.98,0);strap.rotation.set(0,Math.PI/2,.5);fitG.add(strap);
+      const bone=new THREE.Group();bone.position.set(.2,.72,.02);bone.rotation.z=-.6;bone.scale.setScalar(1.2);headFit.add(bone);
+      bone.add(new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.32,6),white));for(const y of [-.16,.16])for(const x of [-.03,.03])bone.add(ball(.045,x,y,0,white))}
+    const masked=fitKind==="spider";[...ears,...face].forEach(e=>e.visible=!masked);hairG.visible=beardG.visible=!masked}
+  let hatOn=true;
   return{g,rig,headG,eyes,legs,arms,rod,hatM,ribM,walkPh:0,blinkT:1+Math.random()*3,
-    setHat(i){const H=HATS[i]||HATS[0];hat.visible=!H.none;if(!H.none){hatM.color.setHex(H.c);ribM.color.setHex(H.r)}},
-    setShirt(hex){shirt.color.setHex(hex)},setHair:buildHair,setBeard:buildBeard,
-    setLook(L){this.setShirt(SHIRTS[L.shirt]??SHIRTS[0]);this.setHat(L.hat|0);buildHair(L.hair|0);buildBeard(L.beard|0)},
+    setHat(i){const H=HATS[i]||HATS[0];hat.visible=!H.none;hatOn=!H.none;if(!H.none){hatM.color.setHex(H.c);ribM.color.setHex(H.r)}if(tiara)tiara.visible=!hatOn},
+    setShirt(hex){shirt.color.setHex(hex);sleeve.color.setHex(hex)},setHair:buildHair,setBeard:buildBeard,
+    setOutfit(i){const o=OUTFITS[i]||OUTFITS[0];shirt.color.setHex(o.body);sleeve.color.copy(o.sleeve==="skin"?skin.color:new THREE.Color(o.sleeve));
+      pants.color.copy(o.pants==="skin"?skin.color:new THREE.Color(o.pants));band.visible=!!o.band;if(o.band)band.material=SM(o.band);buildFit(o);if(tiara)tiara.visible=!hatOn},
+    setLook(L){this.setHat(L.hat|0);buildHair(L.hair|0);this.setOutfit(L.shirt|0);buildBeard(L.beard|0);if(fitKind==="spider")hairG.visible=beardG.visible=false},
     setRod(gold){rod.userData.pole.material.color.setHex(gold?0xf2c14e:0x8a6a3e)}};
 }
 function animChibi(ch,st,dt,t){
@@ -685,7 +731,17 @@ function animChibi(ch,st,dt,t){
   const e=st.emo;
   if(e){const et=e.t;
     if(e.id==="wave"){arms[1].rotation.z=2.5+Math.sin(et*12)*.35;headG.rotation.z=Math.sin(et*6)*.08}
-    if(e.id==="dance"){rig.rotation.y=et*5;bounce=Math.abs(Math.sin(et*9))*.25;arms[0].rotation.z=-2.2+Math.sin(et*9)*.4;arms[1].rotation.z=2.2-Math.sin(et*9)*.4}
+    if(e.id==="dance"){ // hook dance: point out on one side, pull it back to the chest, switch sides, on a bouncy beat
+      const bt=et*2,ph=bt%4,side=Math.floor(ph)%2?-1:1,k=ph%1,reach=k<.45?Math.sin(k/.45*Math.PI/2):Math.max(0,1-(k-.45)/.4);
+      const A=side>0?arms[1]:arms[0],B=side>0?arms[0]:arms[1];
+      A.rotation.x=-.3-1.35*reach;A.rotation.z=side*(-.15-.55*reach);
+      B.rotation.x=-.2;B.rotation.z=side*.9;                 // other hand on the hip
+      rig.rotation.y=side*.4*reach;rig.rotation.z=-side*.07*reach;headG.rotation.y=side*.3*reach;headG.rotation.z=side*.08;
+      legs[side>0?1:0].rotation.x=-.45*reach;legs[side>0?0:1].rotation.x=.1;
+      bounce=Math.abs(Math.sin(bt*Math.PI))*.13;squash=1-Math.abs(Math.cos(bt*Math.PI))*.05}
+    if(e.id==="web"){const k=Math.min(1,et/.15);arms[1].rotation.x=-1.6*k;arms[1].rotation.z=-.1;arms[0].rotation.x=-.3;rig.rotation.x=.08*k;headG.rotation.x=.05}
+    if(e.id==="rock"){const wind=et<.3,k=wind?et/.3:Math.min(1,(et-.3)/.15);
+      arms[1].rotation.x=wind?-3.0*k:-3.0+1.9*k;arms[0].rotation.x=wind?.4*k:.4-.8*k;rig.rotation.y=wind?.35*k:.35-.7*k}
     if(e.id==="sit"){rig.position.y=-.28;legs[0].rotation.x=legs[1].rotation.x=-1.45;arms[0].rotation.x=arms[1].rotation.x=-.35;bounce=0}
     if(e.id==="zone"){headG.rotation.z=.22;headG.rotation.x=-.12;eyeOpen=.45}
     if(e.id==="jump"){bounce=Math.sin(Math.min(1,et/.7)*Math.PI)*1.3;squash=et<.08?.85:1.06;arms[0].rotation.z=-2.7;arms[1].rotation.z=2.7}
@@ -796,14 +852,16 @@ function openCostume(){
   const row=(title,items,cur,key)=>`<div class="cRow"><b>${title}</b><div class="cOpts">${items.map((it,i)=>`<button class="cOpt ${i===cur?"on":""}" data-k="${key}" data-i="${i}" ${it.lock?"disabled":""}>${it.html}</button>`).join("")}</div></div>`;
   const hatItems=HATS.map((h,i)=>({html:S.hats.includes(i)?h.n:`🔒 ${h.n}`,lock:!S.hats.includes(i)}));
   el.innerHTML=`<div class="card costume"><div class="row" style="justify-content:space-between"><h3>코스튬</h3><button class="btn" id="cClose">완료</button></div>
-    ${row("옷",SHIRTS.map((c,i)=>({html:`<i style="background:#${c.toString(16).padStart(6,"0")}"></i>${SHIRT_N[i]}`})),S.shirt,"shirt")}
+    ${row("옷",OUTFITS.map(o=>({html:`${o.ic} ${o.n}`})),S.shirt,"shirt")}
     ${row("모자",hatItems,S.hat,"hat")}
     ${row("헤어",HAIRS.map(n=>({html:n})),S.hair,"hair")}
-    ${row("수염",BEARDS.map(n=>({html:n})),S.beard,"beard")}
-    <p style="font-size:.78rem;color:var(--ink-soft)">🔒 모자는 갈매기호 선장과 물물교환하면 열려요.</p></div>`;
+    <div class="cRow"><b>수염 <small style="font-family:var(--body);font-weight:400;font-size:.72rem;color:var(--ink-soft)">여러 개 같이 · 다시 누르면 빼기</small></b><div class="cOpts">
+      ${BEARDS.map((n,i)=>`<button class="cOpt ${S.beard&(1<<i)?"on":""}" data-beard="${1<<i}">${n}</button>`).join("")}</div></div>
+    <p style="font-size:.76rem;color:var(--ink-soft);margin:0">🔒 모자는 갈매기호와 물물교환하면 열려요 · 🕷️ 거미 히어로와 🦴 원시인은 특별 기술이 생겨요</p></div>`;
   el.hidden=false;
   $("cClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
-  el.querySelectorAll(".cOpt").forEach(b=>b.onclick=()=>{S[b.dataset.k]=+b.dataset.i;me.setLook(S);save();openCostume()});
+  el.querySelectorAll(".cOpt[data-k]").forEach(b=>b.onclick=()=>{S[b.dataset.k]=+b.dataset.i;me.setLook(S);save();renderEmotes();openCostume()});
+  el.querySelectorAll(".cOpt[data-beard]").forEach(b=>b.onclick=()=>{S.beard^=+b.dataset.beard;me.setLook(S);save();openCostume()});
 }
 
 /* chat */
@@ -824,7 +882,8 @@ function speak(text,d,who){
     speechSynthesis.speak(u)}catch(e){}}
 
 /* emotes */
-const EMOTES=[{id:"wave",icon:"👋",name:"손 흔들기",dur:2.2},{id:"dance",icon:"💃",name:"춤추기",dur:3.2},{id:"sit",icon:"🪵",name:"앉기",dur:1e9},{id:"zone",icon:"🌊",name:"멍때리기",dur:5},{id:"play",icon:"🎸",name:"연주",dur:3,need:()=>S.decor.ukulele}];
+const EMOTES=[{id:"wave",icon:"👋",name:"손 흔들기",dur:2.2},{id:"dance",icon:"💃",name:"춤추기",dur:4},{id:"sit",icon:"🪵",name:"앉기",dur:1e9},{id:"zone",icon:"🌊",name:"멍때리기",dur:5},{id:"play",icon:"🎸",name:"연주",dur:3,need:()=>S.decor.ukulele},
+  {id:"web",icon:"🕸️",name:"거미줄",dur:1.1,need:()=>OUTFITS[S.shirt].skill==="web"},{id:"rock",icon:"🪨",name:"돌 던지기",dur:1.1,need:()=>OUTFITS[S.shirt].skill==="rock"}];
 const EMO_ICON={wave:"👋",dance:"💃",sit:"",zone:"🌊",play:"🎶",jump:"",lie:"💤",trade:"🤝"};
 function emoteList(){return EMOTES.filter(e=>!e.need||e.need())}
 let emo=null,lastZone=-99;
@@ -891,6 +950,33 @@ function updGear(G,ch,t,dt,bite){
   const pa=G.l.geometry.attributes.position,dx=G.b.position.x-tip.x,dy=G.b.position.y+.12-tip.y,dz=G.b.position.z-tip.z,sag=Math.hypot(dx,dz)*.06*G.cast;
   for(let i=0;i<LINE_N;i++){const k=i/(LINE_N-1);pa.setXYZ(i,tip.x+dx*k,tip.y+dy*k-sag*4*k*(1-k),tip.z+dz*k)}pa.needsUpdate=true}
 const myGear=makeGear();
+/* outfit skills: a web line that shoots out and sticks, a rock that arcs, bounces and vanishes */
+const shots=[];
+function handPos(ch){const h=ch.arms[1].userData.hand;h.updateMatrixWorld(true);return h.getWorldPosition(new THREE.Vector3())}
+function fireSkill(kind,ch){
+  const ry=ch.g.rotation.y,dir=new THREE.Vector3(Math.sin(ry),0,Math.cos(ry)),p=handPos(ch);
+  if(kind==="web"){
+    const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(new Float32Array(6),3));
+    const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,transparent:true}));l.frustumCulled=false;scene.add(l);
+    const splat=new THREE.Group(),wm=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,side:THREE.DoubleSide});
+    for(let k=0;k<6;k++){const s=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.8,3),wm);s.rotation.z=k/6*Math.PI;splat.add(s)}
+    for(const r of [.14,.28])splat.add(new THREE.Mesh(new THREE.TorusGeometry(r,.012,4,14),wm));
+    splat.visible=false;scene.add(splat);dir.y=.1;dir.normalize();
+    shots.push({kind,t:0,p0:p.clone(),dir,l,splat,wm});beep(1500,.18,"sawtooth",.035);beep(900,.1,"sine",.04,.05)}
+  else{const m=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.2,0),M(0x8d8a80)));m.position.copy(p);scene.add(m);
+    shots.push({kind,t:0,m,v:new THREE.Vector3(dir.x*13,7.5,dir.z*13),bounced:0});beep(220,.1,"triangle",.07)}}
+function updShots(dt){
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.t+=dt;
+    if(s.kind==="web"){const len=Math.min(18,s.t*48),tip=s.p0.clone().addScaledVector(s.dir,len),pa=s.l.geometry.attributes.position;
+      pa.setXYZ(0,s.p0.x,s.p0.y,s.p0.z);pa.setXYZ(1,tip.x,tip.y,tip.z);pa.needsUpdate=true;
+      if(len>=18&&!s.splat.visible){s.splat.visible=true;s.splat.position.copy(tip);s.splat.lookAt(s.p0)}
+      const fade=s.t>.7?Math.max(0,1-(s.t-.7)/.35):1;s.l.material.opacity=fade;s.wm.opacity=fade;
+      if(s.t>1.05){scene.remove(s.l);scene.remove(s.splat);s.l.geometry.dispose();shots.splice(i,1)}}
+    else{s.v.y-=22*dt;s.m.position.addScaledVector(s.v,dt);s.m.rotation.x+=dt*9;s.m.rotation.z+=dt*6;const gy=groundBase(s.m.position.x,s.m.position.z)+.15;
+      if(s.m.position.y<gy){s.m.position.y=gy;if(s.bounced<1){s.v.y=Math.abs(s.v.y)*.35;s.v.x*=.5;s.v.z*=.5;s.bounced++;beep(150,.08,"square",.04)}else s.v.set(0,0,0)}
+      if(s.t>1.5)s.m.scale.setScalar(Math.max(0,1-(s.t-1.5)/.3));
+      if(s.t>1.8){scene.remove(s.m);shots.splice(i,1)}}}}
+function maybeFire(e,ch){if(e&&!e.fired&&((e.id==="web"&&e.t>.15)||(e.id==="rock"&&e.t>.42))){e.fired=1;fireSkill(e.id,ch)}}
 let fishS=null;
 const fishItem={act:()=>startFishing()};
 function groundBase(x,z){return onPier(x,z)?.6:Math.max(groundH(x,z),-.35)}
@@ -972,7 +1058,7 @@ function upRemote(p){
   r.tx=num(pr.x,r.tx,200);r.tz=num(pr.z,r.tz,200);r.tr=num(pr.r,0,10);r.a=String(pr.a||"").slice(0,8);
   r.tj=num(pr.j,0,6);r.bx=Number.isFinite(pr.bx)?num(pr.bx,0,300):NaN;r.bz=Number.isFinite(pr.bz)?num(pr.bz,0,300):NaN;
   const nm=String(pr.n||"누군가").slice(0,12);if(r.tag.n.textContent!==nm)r.tag.n.textContent=nm;
-  const look={shirt:Math.abs(num(pr.c,0,99)|0)%SHIRTS.length,hat:Math.abs(num(pr.h,0,99)|0)%HATS.length,hair:Math.abs(num(pr.hr,0,99)|0)%HAIRS.length,beard:Math.abs(num(pr.bd,0,99)|0)%BEARDS.length};
+  const look={shirt:Math.abs(num(pr.c,0,99)|0)%OUTFITS.length,hat:Math.abs(num(pr.h,0,99)|0)%HATS.length,hair:Math.abs(num(pr.hr,0,99)|0)%HAIRS.length,beard:Math.abs(num(pr.bd,0,99)|0)&7};
   const lk=JSON.stringify(look);if(lk!==r.look){r.look=lk;r.hat=look.hat;r.setLook(look)}
   if(pr.et!==r.et||(pr.e||null)!==(r.emo?r.emo.id:null)){r.et=pr.et;const id=pr.e?String(pr.e).slice(0,8):null,def=EMOTES.find(x=>x.id===id);
     r.emo=id?{id,t:0}:null;r.emoDur=id==="sit"||id==="lie"?1e9:def?def.dur:3;if(r.emo&&EMO_ICON[id])showBubble(r.tag,EMO_ICON[id],true)}
@@ -1075,7 +1161,8 @@ function update(dt,t){
     if(groundH(nx,nz)>-.4||onPier(nx,nz)){player.position.x=nx;player.position.z=nz}
     const target=Math.atan2(mx,mz);let diff=target-player.rotation.y;diff=Math.atan2(Math.sin(diff),Math.cos(diff));player.rotation.y+=diff*Math.min(1,dt*12);
   }
-  if(emo){emo.t+=dt;if(emo.t>emo.dur)emo=null}
+  if(emo){emo.t+=dt;maybeFire(emo,me);if(emo.t>emo.dur)emo=null}
+  updShots(dt);
   if(seat&&!(emo&&emo.id==="sit"))seat=null;
   animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite",air:jumpY>.05},dt,t);
   const baseY=groundBase(player.position.x,player.position.z);
@@ -1089,7 +1176,7 @@ function update(dt,t){
     const k=Math.min(1,dt*10);p.x+=dx*k;p.z+=dz*k;r.speed=r.speed*.8+(d/Math.max(dt,.001))*k*.2;
     r.jy+=(r.tj-r.jy)*Math.min(1,dt*18);p.y=groundBase(p.x,p.z)+r.jy;
     let dr=r.tr-r.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));r.g.rotation.y+=dr*Math.min(1,dt*10);
-    if(r.emo){r.emo.t+=dt;if(r.emo.t>r.emoDur)r.emo=null}
+    if(r.emo){r.emo.t+=dt;maybeFire(r.emo,r);if(r.emo.t>r.emoDur)r.emo=null}
     const mv=r.speed>.8;if(mv&&r.emo&&r.emo.id!=="sit")r.emo=null;
     const fishing=r.a==="fish"||r.a==="bite";
     animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing,bite:r.a==="bite",air:r.tj>.4&&!(r.emo&&r.emo.id==="sit")},dt,t);
@@ -1099,12 +1186,12 @@ function update(dt,t){
   /* camera */
   const tgt=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);
   // in the costume menu the camera comes close and frames the character above the panel
-  const dressing=!$("costume").hidden,cD=dressing?4.6:dist,cP=dressing?.1:pitch;
+  const dressing=!$("costume").hidden,cD=dressing?7.5:dist,cP=dressing?.1:pitch;
   const cx=tgt.x+Math.sin(yaw)*Math.cos(cP)*cD,cz=tgt.z+Math.cos(yaw)*Math.cos(cP)*cD;
   let cy=tgt.y+Math.sin(cP)*cD;cy=Math.max(cy,groundH(cx,cz)+.6,.8);
   camera.position.lerp(new THREE.Vector3(cx,cy,cz),Math.min(1,dt*8));
   // below the shoulder line the camera tips its gaze up to the sky (for sunsets and auroras)
-  const lookUp=dressing?-1.5:Math.max(0,.15-pitch)*22;camera.lookAt(tgt.x,tgt.y+lookUp,tgt.z);
+  const lookUp=dressing?-2.3:Math.max(0,.15-pitch)*22;camera.lookAt(tgt.x,tgt.y+lookUp,tgt.z);
   /* sky */
   const a=time*Math.PI*2,elev=Math.sin(a),hr=hourNow();
   const wn=weatherNow(),cl=wn.cloud,rn=wn.rain;W_NOW=wn;
