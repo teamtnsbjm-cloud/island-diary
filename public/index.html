@@ -138,7 +138,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
   <div id="hudMore">
     <div id="shipInfo"></div>
     <div class="maprow"><canvas id="map" width="120" height="120" aria-label="섬 지도"></canvas>
-      <div class="legend"><span><i style="background:#ff7a1a"></i>모닥불</span><span><i style="background:#8a5a2a"></i>오두막</span><span><i style="background:#a07a46"></i>선착장</span><span><i style="background:#d9533a"></i>꽃게 씨</span><span><i style="background:#ffffff;border:1px solid #2b2a26"></i>친구</span>
+      <div class="legend"><span><i style="background:#ff7a1a"></i>모닥불</span><span><i style="background:#a07a46"></i>선착장</span><span><i style="background:#d9533a"></i>꽃게 씨</span><span><i style="background:#ffffff;border:1px solid #2b2a26"></i>친구</span>
       <button class="chip" id="mute" style="font-size:.72rem;padding:1px 8px;margin-top:2px;align-self:flex-start">🔊 소리</button></div></div>
   </div>
 </div>
@@ -182,21 +182,26 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 const $=id=>document.getElementById(id);
 const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const chance=p=>Math.random()<p;
-const DAY_LEN=600,R=55,CAP=100,KEY="island-diary-play-v1";
+const DAY_LEN=600,R=110,CAP=100,KEY="island-diary-play-v1";
 const touch=('ontouchstart' in window)||matchMedia('(pointer:coarse)').matches;
 if(touch)document.body.classList.add("touch");
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function groundH(x,z){
   const r=Math.hypot(x,z),ang=Math.atan2(z,x);
-  const RR=R*(1+.12*Math.sin(ang*3+1)+.07*Math.sin(ang*5+2));
+  const RR=R*(1+.12*Math.sin(ang*3+1)+.07*Math.sin(ang*5+2)+.03*Math.sin(ang*11));
   const t=1-(r/RR)*(r/RR);
-  let h=t>0?2.6*Math.pow(t,.8):t*4;
-  h+=.45*Math.sin(x*.18)*Math.cos(z*.15)*Math.max(0,t);
-  h+=4.5*Math.exp(-((x-14)**2+(z+22)**2)/200)*Math.max(0,Math.min(1,t*3));
+  let h=t>0?3.2*Math.pow(t,.8):t*5;
+  h+=.6*Math.sin(x*.09)*Math.cos(z*.075)*Math.max(0,t);
+  const inland=Math.max(0,Math.min(1,t*3));
+  h+=7*Math.exp(-((x-28)**2+(z+44)**2)/800)*inland;   // big hill, north-east
+  h+=3.5*Math.exp(-((x+46)**2+(z-6)**2)/450)*inland;  // small hill, west
   return h-.6;
 }
-function rAt(a,h){let r=0;while(r<R*1.4&&groundH(Math.cos(a)*r,Math.sin(a)*r)>h)r+=.25;return r}
+function rAt(a,h){let r=0;while(r<R*1.4&&groundH(Math.cos(a)*r,Math.sin(a)*r)>h)r+=.3;return r}
+// distance to the sea along each direction, for the ocean sound
+const SHORE=[];for(let i=0;i<180;i++)SHORE.push(rAt(i/180*Math.PI*2,0));
+function shoreDist(x,z){const a=(Math.atan2(z,x)+Math.PI*2)%(Math.PI*2),i=Math.floor(a/(Math.PI*2)*180)%180;return Math.max(0,SHORE[i]-Math.hypot(x,z))}
 function hash(n){n=(n^61)^(n>>>16);n=n+(n<<3);n=n^(n>>>4);n=Math.imul(n,0x27d4eb2d);n=n^(n>>>15);return n>>>0}
 
 /* ---------- data ---------- */
@@ -221,11 +226,11 @@ function itemName(id){return RES_N[id]||FISH_BY[id]?.n||id}
 const HATS=[{n:"밀짚모자",c:0xf4d27a,r:0xe8604c},{n:"분홍 모자",c:0xffb3c7,r:0xffffff},{n:"하늘색 모자",c:0x9fd3f0,r:0x2f7fa0},{n:"민트 모자",c:0xa8e6cf,r:0x3f8a5a},{n:"선장 모자",c:0xffffff,r:0x1f3a5f}];
 const SHIRTS=[0xff9f8a,0x8fd3a8,0xffd166,0xb5a8ff,0x7ec3e6,0xffb3c7];
 const POOL=[
-  {give:{mackerel:3},get:{decor:"hammock"},n:"해먹",d:"오두막 옆에 걸어 줄게. 누워서 파도 소리 듣기 좋아."},
+  {give:{mackerel:3},get:{decor:"hammock"},n:"해먹",d:"모닥불 옆에 걸어 줄게. 누워서 파도 소리 듣기 좋아."},
   {give:{coconut:5},get:{hat:1},n:"분홍 모자",d:"요즘 섬 패션은 분홍이래."},
   {give:{shell:8},get:{decor:"ukulele"},n:"우쿨렐레",d:"감정표현에 🎸 연주가 생겨."},
-  {give:{wood:10},get:{decor:"lantern"},n:"등불",d:"밤이 되면 오두막 앞이 환해져."},
-  {give:{snapper:1},get:{decor:"flag"},n:"내 깃발",d:"섬 꼭대기... 말고 오두막 옆에 꽂아 줄게."},
+  {give:{wood:10},get:{decor:"lantern"},n:"등불",d:"밤이 되면 모닥불 쉼터가 환해져."},
+  {give:{snapper:1},get:{decor:"flag"},n:"내 깃발",d:"섬 꼭대기... 말고 모닥불 옆에 꽂아 줄게."},
   {give:{anchovy:6},get:{hat:2},n:"하늘색 모자",d:"바다색이랑 잘 어울려."},
   {give:{squid:2},get:{rod:1},n:"황금 낚싯대",d:"입질이 빨라지고 귀한 물고기가 잘 물어."},
   {give:{puffer:1,shell:3},get:{hat:3},n:"민트 모자",d:"복어는 내가 잘 키워 볼게."},
@@ -278,19 +283,49 @@ let invKey="";
 function maybeInv(){const k=JSON.stringify([S.inv,S.fish,S.hat,S.hats.length])+nearWater();if(k!==invKey){invKey=k;renderInv()}}
 
 /* ---------- audio ---------- */
-let actx=null,master=null,muted=false;
+let actx=null,master=null,muted=false,oceanBus=null,rainBus=null;
+// layered ocean: low swell + bright breaking "shhh" waves on a random schedule, rain on top
+function noiseBuf(sec,kind){
+  const n=actx.sampleRate*sec,buf=actx.createBuffer(2,n,actx.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b0=0,b1=0,b2=0,last=0;
+    for(let i=0;i<n;i++){const w=Math.random()*2-1;
+      if(kind==="brown"){last=(last+.02*w)/1.02;d[i]=last*3.2}
+      else{b0=.99765*b0+w*.099;b1=.963*b1+w*.2965;b2=.57*b2+w*1.0526;d[i]=(b0+b1+b2+w*.1848)*.18}}}
+  return buf}
+function loopSrc(buf){const s=actx.createBufferSource();s.buffer=buf;s.loop=true;s.loopStart=Math.random();s.start(0,Math.random()*2);return s}
 function startAudio(){
   if(actx)return;
   try{actx=new (window.AudioContext||window.webkitAudioContext)();
-    const len=actx.sampleRate*3,buf=actx.createBuffer(1,len,actx.sampleRate),d=buf.getChannelData(0);let last=0;
-    for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.5}
-    const src=actx.createBufferSource();src.buffer=buf;src.loop=true;
-    const f=actx.createBiquadFilter();f.type="lowpass";f.frequency.value=520;
-    const g=actx.createGain();g.gain.value=.28;
-    const lfo=actx.createOscillator();lfo.frequency.value=.11;const lg=actx.createGain();lg.gain.value=.18;lfo.connect(lg);lg.connect(g.gain);
-    master=actx.createGain();master.gain.value=.7;
-    src.connect(f);f.connect(g);g.connect(master);master.connect(actx.destination);src.start();lfo.start()}catch(e){actx=null}
+    master=actx.createGain();master.gain.value=.75;master.connect(actx.destination);
+    oceanBus=actx.createGain();oceanBus.gain.value=.5;oceanBus.connect(master);
+    const brown=noiseBuf(6,"brown"),pink=noiseBuf(6,"pink");
+    // deep swell that breathes slowly
+    const sw=loopSrc(brown),swF=actx.createBiquadFilter();swF.type="lowpass";swF.frequency.value=320;
+    const swG=actx.createGain();swG.gain.value=.32;const lfo=actx.createOscillator();lfo.frequency.value=.07;const lg=actx.createGain();lg.gain.value=.12;lfo.connect(lg);lg.connect(swG.gain);lfo.start();
+    sw.connect(swF);swF.connect(swG);swG.connect(oceanBus);
+    // constant fizz of foam on the sand
+    const fz=loopSrc(pink),fzF=actx.createBiquadFilter();fzF.type="highpass";fzF.frequency.value=2500;const fzG=actx.createGain();fzG.gain.value=.025;
+    fz.connect(fzF);fzF.connect(fzG);fzG.connect(oceanBus);
+    // breaking waves: bright wash swelling in and hissing out
+    const wv=loopSrc(pink),wvF=actx.createBiquadFilter();wvF.type="bandpass";wvF.Q.value=.5;wvF.frequency.value=900;
+    const wvG=actx.createGain();wvG.gain.value=0;const pan=actx.createStereoPanner?actx.createStereoPanner():null;
+    wv.connect(wvF);wvF.connect(wvG);if(pan){wvG.connect(pan);pan.connect(oceanBus)}else wvG.connect(oceanBus);
+    const wave=()=>{if(!actx)return;const t=actx.currentTime,rise=1.4+Math.random()*1.2,fall=2.8+Math.random()*2.5,peak=.35+Math.random()*.35;
+      wvG.gain.cancelScheduledValues(t);wvG.gain.setValueAtTime(wvG.gain.value,t);wvG.gain.linearRampToValueAtTime(peak,t+rise);wvG.gain.setTargetAtTime(.02,t+rise,fall/3);
+      wvF.frequency.cancelScheduledValues(t);wvF.frequency.setValueAtTime(600,t);wvF.frequency.linearRampToValueAtTime(2200+Math.random()*1200,t+rise);wvF.frequency.setTargetAtTime(700,t+rise,fall/2.5);
+      if(pan)pan.pan.setTargetAtTime((Math.random()-.5)*.8,t,.5);
+      setTimeout(wave,(rise+fall*.8+Math.random()*3)*1000)};
+    wave();
+    // rain
+    rainBus=actx.createGain();rainBus.gain.value=0;rainBus.connect(master);
+    const rn=loopSrc(pink),rnF=actx.createBiquadFilter();rnF.type="highpass";rnF.frequency.value=1800;rn.connect(rnF);rnF.connect(rainBus);
+  }catch(e){actx=null}
 }
+function gull(){if(!actx||muted)return;try{const t=actx.currentTime;for(let k=0;k<2;k++){const o=actx.createOscillator(),g=actx.createGain(),t0=t+k*.32;o.type="triangle";
+  o.frequency.setValueAtTime(1900,t0);o.frequency.exponentialRampToValueAtTime(1150,t0+.25);g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.035,t0+.04);g.gain.exponentialRampToValueAtTime(.001,t0+.28);
+  o.connect(g);g.connect(oceanBus);o.start(t0);o.stop(t0+.3)}}catch(e){}}
+function setAmbience(prox,rain){if(!actx)return;const t=actx.currentTime;
+  oceanBus.gain.setTargetAtTime(.06+.94*prox,t,.4);rainBus.gain.setTargetAtTime(rain*.22,t,1)}
 function beep(freq,dur,type,vol,delay){
   if(!actx||muted)return;
   try{const o=actx.createOscillator(),g=actx.createGain(),t0=actx.currentTime+(delay||0);o.type=type||"triangle";o.frequency.value=freq;
@@ -299,17 +334,17 @@ function beep(freq,dur,type,vol,delay){
 }
 function horn(){beep(98,1.6,"sawtooth",.12);beep(147,1.6,"sawtooth",.06)}
 function strum(){[392,494,587,784].forEach((f,i)=>beep(f,.6,"triangle",.1,i*.09))}
-$("mute").onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.7;$("mute").textContent=muted?"🔇 꺼짐":"🔊 소리";startAudio()};
+$("mute").onclick=()=>{muted=!muted;startAudio();if(master)master.gain.value=muted?0:.75;if(muted&&window.speechSynthesis)speechSynthesis.cancel();$("mute").textContent=muted?"🔇 꺼짐":"🔊 소리";};
 
 /* ---------- three.js scene ---------- */
 const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,touch?1.5:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 $("game").appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 const skyCol=new THREE.Color(0x8fd3ef);
-scene.background=skyCol;scene.fog=new THREE.Fog(skyCol,90,340);
-const camera=new THREE.PerspectiveCamera(55,1,.1,700);
+scene.background=skyCol;scene.fog=new THREE.Fog(skyCol,160,720);
+const camera=new THREE.PerspectiveCamera(55,1,.1,2600);
 function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
 addEventListener("resize",resize);resize();
 
@@ -317,30 +352,78 @@ const hemi=new THREE.HemisphereLight(0xfff6e0,0xc9b07a,.6);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff1d0,1);sun.castShadow=true;
 sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-34,right:34,top:34,bottom:-34,near:1,far:220});
 scene.add(sun);scene.add(sun.target);
-const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(9,16,12),new THREE.MeshBasicMaterial({color:0xfff3b0,fog:false}));scene.add(sunDisc);
-const moonDisc=new THREE.Mesh(new THREE.SphereGeometry(6,16,12),new THREE.MeshBasicMaterial({color:0xe8ecf5,fog:false}));scene.add(moonDisc);
-const starGeo=new THREE.BufferGeometry(),sp=[];
-for(let i=0;i<500;i++){const a=Math.random()*Math.PI*2,e=Math.random()*1.3+.08;sp.push(Math.cos(a)*Math.cos(e)*380,Math.sin(e)*380,Math.sin(a)*Math.cos(e)*380)}
-starGeo.setAttribute("position",new THREE.Float32BufferAttribute(sp,3));
-const starMat=new THREE.PointsMaterial({color:0xffffff,size:2,sizeAttenuation:false,transparent:true,opacity:0,fog:false});
-scene.add(new THREE.Points(starGeo,starMat));
+/* sky dome: gradient from horizon to zenith, with a soft glow around the sun */
+const skyU={top:{value:new THREE.Color(0x4aa8e8)},hor:{value:new THREE.Color(0xbfe8f5)},sunDir:{value:new THREE.Vector3(0,1,0)},sunCol:{value:new THREE.Color(0xffc080)},glow:{value:0}};
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(2000,32,18),new THREE.ShaderMaterial({uniforms:skyU,side:THREE.BackSide,depthWrite:false,
+  vertexShader:"varying vec3 vD;void main(){vD=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}",
+  fragmentShader:"uniform vec3 top,hor,sunCol,sunDir;uniform float glow;varying vec3 vD;void main(){vec3 d=normalize(vD);float h=clamp(d.y,0.,1.);vec3 c=mix(hor,top,pow(h,.5));float s=max(dot(d,normalize(sunDir)),0.);c+=sunCol*(pow(s,6.)*.45*glow+pow(s,90.)*.8*glow+pow(s,12.)*.15);if(d.y<0.)c=hor;gl_FragColor=vec4(c,1.);}"}));
+skyDome.renderOrder=-10;scene.add(skyDome);
+const SKY_STOPS=[ // sun elevation → zenith, horizon, sun glow
+  [-1, 0x050a1a,0x0d1730,0],[-.32,0x070f26,0x152443,0],[-.18,0x1a1e4c,0x35306a,.3],[-.08,0x2f3680,0xb4567c,.9],
+  [0,0x4656aa,0xff7e58,1],[.1,0x5a86cc,0xffa565,1],[.22,0x5fa6e0,0xffd6a6,.6],[.4,0x4aa8e8,0xbfe8f5,.2],[1,0x3d9be6,0xc7ecf7,.1]];
+const _c1=new THREE.Color(),_c2=new THREE.Color();
+function skyAt(e,outTop,outHor){for(let i=1;i<SKY_STOPS.length;i++){const a=SKY_STOPS[i-1],b=SKY_STOPS[i];if(e<=b[0]||i===SKY_STOPS.length-1){const k=Math.max(0,Math.min(1,(e-a[0])/(b[0]-a[0])));
+  outTop.setHex(a[1]).lerp(_c1.setHex(b[1]),k);outHor.setHex(a[2]).lerp(_c2.setHex(b[2]),k);return a[3]+(b[3]-a[3])*k}}return 0}
+const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(28,20,14),new THREE.MeshBasicMaterial({color:0xfff3b0,fog:false}));scene.add(sunDisc);
+const moonDisc=new THREE.Mesh(new THREE.SphereGeometry(18,20,14),new THREE.MeshBasicMaterial({color:0xeef1f8,fog:false}));scene.add(moonDisc);
+const skyGroup=new THREE.Group();scene.add(skyGroup); // follows the camera so the sky is always far away
+const starGeo=new THREE.BufferGeometry(),sp=[],sc=[];
+for(let i=0;i<1600;i++){const a=Math.random()*Math.PI*2,e=Math.asin(Math.random())*.98+.03,r=1500;sp.push(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r);const b=.5+Math.random()*.5;sc.push(b,b,b*(.9+Math.random()*.2))}
+starGeo.setAttribute("position",new THREE.Float32BufferAttribute(sp,3));starGeo.setAttribute("color",new THREE.Float32BufferAttribute(sc,3));
+const starMat=new THREE.PointsMaterial({size:2.2,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:0,fog:false,depthWrite:false});
+const stars=new THREE.Points(starGeo,starMat);skyGroup.add(stars);
+/* aurora: wavy additive curtains low in the north */
+const auroraU={t:{value:0},a:{value:0}};
+const auroraMat=new THREE.ShaderMaterial({uniforms:auroraU,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+  vertexShader:"uniform float t;varying vec2 vU;void main(){vU=uv;vec3 p=position;p.z+=sin(p.x*.006+t*.25)*90.+sin(p.x*.017-t*.18)*35.;p.y+=sin(p.x*.01+t*.2)*20.;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}",
+  fragmentShader:"uniform float t,a;varying vec2 vU;void main(){float b=pow(sin(vU.x*55.+t*.9+sin(vU.x*9.+t*.3)*3.)*.5+.5,2.)*.6+.4*(sin(vU.x*17.-t*.4)*.5+.5);float v=vU.y;float f=smoothstep(0.,.18,v)*(1.-smoothstep(.45,1.,v));vec3 c=mix(vec3(.15,1.,.55),vec3(.55,.35,1.),smoothstep(.35,.95,v));float k=min(1.,b*f*a*2.3);gl_FragColor=vec4(c*k,k);}"});
+const aurora=new THREE.Group();skyGroup.add(aurora);
+[[0,-1000,330,0],[-350,-1150,420,.3],[380,-950,300,-.25]].forEach(([x,z,y,ry])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1700,480,90,1),auroraMat);m.position.set(x,y,z);m.rotation.y=ry;aurora.add(m)});
+aurora.visible=false;
+/* shooting stars */
+const meteors=[];
+for(let i=0;i<3;i++){const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(new Float32Array(6),3));g.setAttribute("color",new THREE.Float32BufferAttribute([1,1,1,0,0,0],3));
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));l.visible=false;l.frustumCulled=false;skyGroup.add(l);meteors.push({l,t:1,dur:1,p:new THREE.Vector3(),v:new THREE.Vector3()})}
+function shootStar(){const m=meteors.find(m=>m.t>=m.dur);if(!m)return false;const a=Math.random()*Math.PI*2,e=.35+Math.random()*.6,r=1300;
+  m.p.set(Math.cos(a)*Math.cos(e)*r,Math.sin(e)*r,Math.sin(a)*Math.cos(e)*r);m.v.set(-Math.sin(a)*(Math.random()<.5?1:-1),-.35-Math.random()*.4,Math.cos(a)).normalize().multiplyScalar(700+Math.random()*400);
+  m.t=0;m.dur=.7+Math.random()*.6;m.l.visible=true;return true}
+/* clouds: soft puffs drifting around the island */
+const cloudMat=new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.9,flatShading:true,depthWrite:false});
+const clouds=[];
+for(let i=0;i<22;i++){const g=new THREE.Group(),n=4+Math.floor(Math.random()*4);
+  for(let k=0;k<n;k++){const s=new THREE.Mesh(new THREE.IcosahedronGeometry(14+Math.random()*12,1),cloudMat);s.position.set((k-n/2)*16+Math.random()*8,Math.random()*6,Math.random()*14-7);s.scale.y=.55;g.add(s)}
+  const a=i/22*Math.PI*2+Math.random()*.2,r=260+Math.random()*420;g.userData={a,r,y:95+Math.random()*70,sp:(.004+Math.random()*.006)*(Math.random()<.5?1:-1),need:i/22};
+  scene.add(g);clouds.push(g)}
+/* rain */
+const RAIN_N=900,rainGeo=new THREE.BufferGeometry(),rainPos=new Float32Array(RAIN_N*6);
+for(let i=0;i<RAIN_N;i++){const x=(Math.random()-.5)*70,y=Math.random()*40,z=(Math.random()-.5)*70;rainPos.set([x,y,z,x+.15,y-1.3,z],i*6)}
+rainGeo.setAttribute("position",new THREE.BufferAttribute(rainPos,3));
+const rain=new THREE.LineSegments(rainGeo,new THREE.LineBasicMaterial({color:0xcfe4f0,transparent:true,opacity:.5,depthWrite:false}));rain.frustumCulled=false;rain.visible=false;scene.add(rain);
+/* weather: changes every quarter day, one step at a time (맑음 ↔ 구름 ↔ 흐림 ↔ 비), same for everyone */
+const WEATHER=[{n:"맑음",ic:"☀️",cloud:.12},{n:"구름 조금",ic:"⛅",cloud:.45},{n:"흐림",ic:"☁️",cloud:.85},{n:"비",ic:"🌧️",cloud:1}];
+function weatherAt(slot){let w=0;for(let k=slot-48;k<=slot;k++){const h=hash(k*31+7)%100;
+  if(w===0){if(h<35)w=1}else if(w===3){if(h<55)w=2}else{const up=w===1?30:28,down=w===1?45:40;if(h<up)w++;else if(h<up+down)w--}}return w}
+function weatherNow(){const s=Date.now()/1000/(DAY_LEN/4),k=Math.floor(s),f=s-k,a=weatherAt(k),b=weatherAt(k+1),blend=Math.max(0,(f-.8)/.2);
+  const ca=WEATHER[a].cloud,cb=WEATHER[b].cloud;return{w:blend>.5?b:a,cloud:ca+(cb-ca)*blend,rain:(a===3?1-blend:0)+(b===3?blend:0)}}
+// night shows: aurora on most nights, shooting stars every clear night; in that order
+function auroraNight(d){return hash(d*17+11)%10<6}
 
 const M=c=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
 const SM=c=>new THREE.MeshLambertMaterial({color:c});
 function sh(m){m.castShadow=true;m.receiveShadow=true;return m}
 
 // ground
-const gGeo=new THREE.PlaneGeometry(200,200,150,150);gGeo.rotateX(-Math.PI/2);
+const gGeo=new THREE.PlaneGeometry(400,400,220,220);gGeo.rotateX(-Math.PI/2);
 {const p=gGeo.attributes.position,cols=[];
 const wet=new THREE.Color(0xcfb47e),sand=new THREE.Color(0xf1dfae),grass=new THREE.Color(0x8cbf5e),grass2=new THREE.Color(0x63a046),hillC=new THREE.Color(0x9a9a7a),deep=new THREE.Color(0xb59c6c);
 for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),h=groundH(x,z);p.setY(i,h);
-  const c=h<-.2?deep:h<.25?wet:h<.95?sand:h>4.6?hillC:grass.clone().lerp(grass2,(Math.sin(x*.4)*Math.cos(z*.35)+1)/2);
+  const c=h<-.2?deep:h<.25?wet:h<.95?sand:h>6?hillC:grass.clone().lerp(grass2,(Math.sin(x*.2)*Math.cos(z*.17)+1)/2);
   cols.push(c.r,c.g,c.b)}
 gGeo.setAttribute("color",new THREE.Float32BufferAttribute(cols,3));gGeo.computeVertexNormals()}
 const ground=new THREE.Mesh(gGeo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}));ground.receiveShadow=true;scene.add(ground);
 
 // water
-const wGeo=new THREE.PlaneGeometry(600,600,72,72);wGeo.rotateX(-Math.PI/2);
+const wGeo=new THREE.PlaneGeometry(1800,1800,96,96);wGeo.rotateX(-Math.PI/2);
 const wBase=wGeo.attributes.position.array.slice();
 const waterMat=new THREE.MeshPhongMaterial({color:0x2a9db0,transparent:true,opacity:.84,flatShading:true,shininess:90,specular:0x99dddd});
 scene.add(new THREE.Mesh(wGeo,waterMat));
@@ -387,34 +470,34 @@ function makePalm(x,z){
       if(chance(.1)){S.inv.coconut++;log("코코넛이 머리에 퉁. 아프지만 하나 얻었다.");showBubble(meTag,"💫",true);beep(180,.2,"square")}
       else{const n=rand(1,2);S.inv.coconut+=n;log(`코코넛 ${n}개를 땄다.`);beep(660,.12)}})});
 }
-for(let i=0;i<26;i++){const s=freeSpot(.12,.9,3,.4);makePalm(s.x,s.z)}
+for(let i=0;i<46;i++){const s=freeSpot(.1,.92,3,.4);makePalm(s.x,s.z)}
 /* decoration */
 {const petal=[0xff8fab,0xffd166,0xffffff,0xc7a0ff,0xff9f68].map(c=>SM(c)),stem=M(0x4f8a3a),tuft=M(0x6fa84a),rockM=M(0x9a958a);
  const fg=new THREE.SphereGeometry(.13,6,5),sg=new THREE.CylinderGeometry(.025,.025,.35,4),tg=new THREE.ConeGeometry(.12,.55,4);
  const keep=taken.length;
- for(let i=0;i<110;i++){const s=freeSpot(.05,.85,.4,1.1);const y=groundH(s.x,s.z),g=new THREE.Group();g.position.set(s.x,y,s.z);
+ for(let i=0;i<180;i++){const s=freeSpot(.05,.88,.4,1.1);const y=groundH(s.x,s.z),g=new THREE.Group();g.position.set(s.x,y,s.z);
    if(i%3===0){for(let k=0;k<5;k++){const t=new THREE.Mesh(tg,tuft);t.position.set((Math.random()-.5)*.5,.25,(Math.random()-.5)*.5);t.rotation.z=(Math.random()-.5)*.6;g.add(t)}}
    else{const st=new THREE.Mesh(sg,stem);st.position.y=.17;g.add(st);const f=new THREE.Mesh(fg,petal[i%5]);f.position.y=.38;f.scale.y=.6;g.add(f)}
    scene.add(g)}
  taken.length=keep;
- for(let i=0;i<22;i++){const s=freeSpot(.1,.95,2,.1);const big=i%3===0,sc=big?1.2+srnd():.35+srnd()*.4;
+ for(let i=0;i<55;i++){const s=freeSpot(.1,.95,2,.1);const big=i%3===0,sc=big?1.2+srnd():.35+srnd()*.4;
    const r=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(sc,0),rockM));r.position.set(s.x,groundH(s.x,s.z)+sc*.3,s.z);r.rotation.set(srnd()*3,srnd()*3,0);r.scale.y=.7;scene.add(r);
    if(big)colliders.push({x:s.x,z:s.z,r:sc*.9})}}
 
 /* wood, leaves, shells */
 const woodPiles=[],bushes=[],shells=[];
-for(let i=0;i<14;i++){const s=freeSpot(.08,.85,2,.5);const g=new THREE.Group();g.position.set(s.x,groundH(s.x,s.z)+.12,s.z);
+for(let i=0;i<34;i++){const s=freeSpot(.06,.85,2,.5);const g=new THREE.Group();g.position.set(s.x,groundH(s.x,s.z)+.12,s.z);
   for(let k=0;k<3;k++){const l=sh(new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,1.4,5),woodMat));l.rotation.z=Math.PI/2;l.rotation.y=k*1.1+srnd();l.position.y=k*.09;g.add(l)}
   scene.add(g);const W={g,cd:0};woodPiles.push(W);
   items.push({x:s.x,z:s.z,r:1.9,label:()=>W.cd>0?null:{t:"나뭇가지 줍기",ok:true},
     act:()=>busy(.9,"줍는 중…",()=>{const n=rand(2,3);S.inv.wood+=n;W.cd=55;g.visible=false;log(`나무 ${n}개를 주웠다.`);beep(520,.1)})})}
 const bushMat=M(0x4f8f3a);
-for(let i=0;i<14;i++){const s=freeSpot(.06,.75,2.2,1);const m=sh(new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),bushMat));m.scale.set(1.2,.8,1.1);m.position.set(s.x,groundH(s.x,s.z)+.35,s.z);scene.add(m);
+for(let i=0;i<34;i++){const s=freeSpot(.05,.78,2.2,1);const m=sh(new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),bushMat));m.scale.set(1.2,.8,1.1);m.position.set(s.x,groundH(s.x,s.z)+.35,s.z);scene.add(m);
   const B={m,cd:0};bushes.push(B);
   items.push({x:s.x,z:s.z,r:2.1,label:()=>B.cd>0?null:{t:"야자잎 뜯기",ok:true},
     act:()=>busy(.9,"뜯는 중…",()=>{const n=rand(2,3);S.inv.leaf+=n;B.cd=55;m.scale.set(.6,.4,.55);log(`야자잎 ${n}장을 뜯었다.`);beep(560,.1)})})}
 const shellMats=[SM(0xffc9c9),SM(0xfff1dc),SM(0xf7d6a8)];
-for(let i=0;i<16;i++){const a=srnd()*Math.PI*2,r=rAt(a,.45)-srnd()*2.5,x=Math.cos(a)*r,z=Math.sin(a)*r;
+for(let i=0;i<40;i++){const a=srnd()*Math.PI*2,r=rAt(a,.45)-srnd()*3,x=Math.cos(a)*r,z=Math.sin(a)*r;
   const m=sh(new THREE.Mesh(new THREE.ConeGeometry(.18,.32,7),shellMats[i%3]));m.position.set(x,groundH(x,z)+.08,z);m.rotation.z=1.3;m.rotation.y=srnd()*6;scene.add(m);
   const Sh={m,cd:0};shells.push(Sh);
   items.push({x,z,r:1.6,label:()=>Sh.cd>0?null:{t:"조개 줍기",ok:true},
@@ -441,17 +524,7 @@ items.push({x:CAMP.x,z:CAMP.z,r:3,label:()=>{
   act:()=>{if(fireLit()){const f=commonFish();if(f){busy(2,"지글지글…",()=>{S.fish[f]--;log(`${itemName(f)} 구이 냠냠. 바다 맛이다.`);showBubble(meTag,"😋",true)})}else startEmote("zone")}
     else busy(2.2,"나무 비비는 중…",()=>{S.inv.wood-=3;S.fireUntil=Date.now()+180000;log("모닥불이 타닥타닥 붙었다.");beep(330,.3,"sawtooth",.08)})}});
 
-/* hut + decor */
-const hutGhost=new THREE.Mesh(new THREE.BoxGeometry(3.4,2.2,3),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.18,wireframe:true}));
-const hy=groundH(HUT.x,HUT.z);hutGhost.position.set(HUT.x,hy+1.1,HUT.z);scene.add(hutGhost);
-const hut=new THREE.Group();hut.position.set(HUT.x,hy,HUT.z);scene.add(hut);
-{const floor=sh(new THREE.Mesh(new THREE.BoxGeometry(3.6,.25,3.2),M(0x9b7444)));floor.position.y=.35;hut.add(floor);
- for(const [x,z] of [[-1.6,-1.4],[1.6,-1.4],[-1.6,1.4],[1.6,1.4]]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,2.4,5),woodMat));p.position.set(x,1.2,z);hut.add(p)}
- const back=sh(new THREE.Mesh(new THREE.BoxGeometry(3.4,1.8,.12),M(0xb08a55)));back.position.set(0,1.3,-1.4);hut.add(back);
- const roof=sh(new THREE.Mesh(new THREE.ConeGeometry(3,1.6,4),M(0x6a9a3c)));roof.position.y=3.1;roof.rotation.y=Math.PI/4;roof.scale.set(1.15,1,1);hut.add(roof)}
-colliders.push({x:HUT.x,z:HUT.z-1.2,r:1.0,need:()=>S.hut});
-items.push({x:HUT.x,z:HUT.z,r:3.2,label:()=>S.hut?{t:"오두막에서 쉬기",ok:true}:{t:"오두막 짓기 (나무 6 · 잎 6)",ok:S.inv.wood>=6&&S.inv.leaf>=6},
-  act:()=>{if(!S.hut)busy(4,"오두막 짓는 중…",()=>{S.inv.wood-=6;S.inv.leaf-=6;S.hut=true;log("오두막 완성! 나만의 집이 생겼다.");beep(523,.15);beep(784,.25,"triangle",.15,.15)});else startEmote("sit")}});
+/* decor from the trading ship, set up in the rest area beside the camp fire */
 const decor={};
 function hutPos(dx,dz){const x=HUT.x+dx,z=HUT.z+dz;return[x,groundH(x,z),z]}
 { // hammock
@@ -623,7 +696,7 @@ addEventListener("blur",()=>{for(const k in keys)keys[k]=false});
 const cvs=renderer.domElement;let drag=null;
 cvs.addEventListener("pointerdown",e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};cvs.setPointerCapture(e.pointerId);if(typing())document.activeElement.blur()});
 cvs.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;
-  yaw-=dx*.006;pitch=Math.max(.12,Math.min(1.2,pitch+dy*.004))});
+  yaw-=dx*.006;pitch=Math.max(-.45,Math.min(1.2,pitch+dy*.004))});
 cvs.addEventListener("pointerup",()=>drag=null);cvs.addEventListener("pointercancel",()=>drag=null);
 cvs.addEventListener("wheel",e=>{dist=Math.max(5,Math.min(26,dist+e.deltaY*.01));e.preventDefault()},{passive:false});
 if(touch){$("joy").hidden=false;$("actBtn").hidden=false}
@@ -650,7 +723,17 @@ let say={s:"",st:0};
 function openChat(){$("chatForm").hidden=false;$("prompt").hidden=true;$("chatIn").focus()}
 function closeChat(){$("chatIn").value="";$("chatIn").blur();$("chatForm").hidden=true}
 $("chatForm").addEventListener("submit",e=>{e.preventDefault();const t=$("chatIn").value.replace(/\s+/g," ").trim().slice(0,40);
-  if(t){say={s:t,st:Date.now()};showBubble(meTag,t,false)}closeChat()});
+  if(t){say={s:t,st:Date.now()};showBubble(meTag,t,false);meTag.bub.style.opacity="1";speak(t,0,S.nick)}closeChat()});
+/* characters speak their chat out loud; quieter with distance, silent past HEAR */
+const HEAR=40,canSpeak="speechSynthesis" in window;
+function strHash(s){let h=7;for(const ch of s)h=Math.imul(h^ch.codePointAt(0),2654435761)>>>0;return h}
+function speak(text,d,who){
+  if(!canSpeak||muted||d>HEAR)return;
+  try{if(speechSynthesis.pending&&speechSynthesis.speaking)speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text),h=strHash(who||""),ko=speechSynthesis.getVoices().filter(v=>/^ko/i.test(v.lang));
+    u.lang="ko-KR";if(ko.length)u.voice=ko[h%ko.length];
+    u.pitch=.75+(h%100)/100*.9;u.rate=1.05;u.volume=Math.max(.06,Math.pow(1-d/HEAR,1.6));
+    speechSynthesis.speak(u)}catch(e){}}
 
 /* emotes */
 const EMOTES=[{id:"wave",icon:"👋",name:"손 흔들기",dur:2.2},{id:"dance",icon:"💃",name:"춤추기",dur:3.2},{id:"sit",icon:"🪵",name:"앉기",dur:1e9},{id:"zone",icon:"🌊",name:"멍때리기",dur:5},{id:"play",icon:"🎸",name:"연주",dur:3,need:()=>S.decor.ukulele}];
@@ -676,14 +759,13 @@ const map=$("map"),mctx=map.getContext("2d"),MS=120,MR=R*1.3;
 const mapBg=document.createElement("canvas");mapBg.width=mapBg.height=MS;
 {const c=mapBg.getContext("2d"),img=c.createImageData(MS,MS);
  for(let y=0;y<MS;y++)for(let x=0;x<MS;x++){const wx=(x/MS*2-1)*MR,wz=(y/MS*2-1)*MR,h=groundH(wx,wz),i=(y*MS+x)*4;
-   const col=onPier(wx,wz)?[164,123,74]:h<0?[42,157,176]:h<.95?[241,223,174]:h>4.6?[154,154,122]:[130,184,90];img.data.set([...col,255],i)}
+   const col=onPier(wx,wz)?[164,123,74]:h<0?[42,157,176]:h<.95?[241,223,174]:h>6?[154,154,122]:[130,184,90];img.data.set([...col,255],i)}
  c.putImageData(img,0,0)}
 function w2m(x,z){return[(x/MR+1)/2*MS,(z/MR+1)/2*MS]}
 function drawMap(){
   mctx.clearRect(0,0,MS,MS);mctx.save();mctx.beginPath();mctx.arc(MS/2,MS/2,MS/2,0,7);mctx.clip();mctx.drawImage(mapBg,0,0);
   const dot=(x,z,c,r,stroke)=>{const [a,b]=w2m(x,z);mctx.fillStyle=c;mctx.beginPath();mctx.arc(a,b,r||3,0,7);mctx.fill();if(stroke){mctx.strokeStyle="#2b2a26";mctx.lineWidth=1;mctx.stroke()}};
   dot(CAMP.x,CAMP.z,fireLit()?"#ff7a1a":"#7a6a58",3.5);
-  dot(HUT.x,HUT.z,S.hut?"#8a5a2a":"rgba(120,90,50,.45)",3.5);
   dot(C.x,C.z,"#d9533a",2.5);
   if(ship.visible){const [a,b]=w2m(ship.position.x,ship.position.z);mctx.fillStyle="#7a2f2a";mctx.fillRect(Math.max(4,Math.min(MS-10,a-4)),Math.max(4,Math.min(MS-8,b-2)),9,5)}
   remotes.forEach(r=>dot(r.g.position.x,r.g.position.z,"#ffffff",2.6,true));
@@ -788,7 +870,9 @@ function upRemote(p){
   const nm=String(pr.n||"누군가").slice(0,12);if(r.tag.n.textContent!==nm)r.tag.n.textContent=nm;
   const hat=Math.abs(num(pr.h,0,99)|0)%HATS.length;if(hat!==r.hat){r.hat=hat;r.setHat(hat)}
   if(pr.et!==r.et){r.et=pr.et;r.emo=pr.e?{id:String(pr.e).slice(0,8),t:0}:null;if(r.emo&&EMO_ICON[r.emo.id])showBubble(r.tag,EMO_ICON[r.emo.id],true)}
-  if(pr.st!==r.st){r.st=pr.st;if(pr.s)showBubble(r.tag,String(pr.s).slice(0,40),false)}
+  if(pr.st!==r.st){const first=r.st===0&&Date.now()-num(pr.st,0,1e15)>8000;r.st=pr.st;
+    if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
+      if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
   r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);
 }
 function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);r.tag.el.remove();remotes.delete(peer)}
@@ -840,10 +924,11 @@ let started=false;
  $("keys").innerHTML=k.map(([a,b])=>`<b>${a}</b><span>${b}</span>`).join("");
  $("nickIn").value=S.nick;
  $("go").onclick=()=>{const n=$("nickIn").value.replace(/\s+/g," ").trim().slice(0,12);if(n){S.nick=n;meTag.n.textContent=n}
+   if(canSpeak){try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}} // unlock voice on phones
    $("title").hidden=true;started=true;startAudio();save();initRoom()}}
 
 /* ---------- loop ---------- */
-const cDay=new THREE.Color(0x8fd3ef),cDusk=new THREE.Color(0xf3a46b),cNight=new THREE.Color(0x0f1d33);
+let W_NOW={w:0,cloud:0,rain:0};const nightShow={aurora:-1,meteor:-1};
 function timeNow(){return (Date.now()/1000%DAY_LEN)/DAY_LEN}
 function hourNow(){return (6+timeNow()*24)%24}
 let last=performance.now(),saveT=0,mapT=1,clockKey="";
@@ -903,19 +988,53 @@ function update(dt,t){
   const tgt=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);
   const cx=tgt.x+Math.sin(yaw)*Math.cos(pitch)*dist,cz=tgt.z+Math.cos(yaw)*Math.cos(pitch)*dist;
   let cy=tgt.y+Math.sin(pitch)*dist;cy=Math.max(cy,groundH(cx,cz)+.6,.8);
-  camera.position.lerp(new THREE.Vector3(cx,cy,cz),Math.min(1,dt*8));camera.lookAt(tgt);
+  camera.position.lerp(new THREE.Vector3(cx,cy,cz),Math.min(1,dt*8));
+  // below the shoulder line the camera tips its gaze up to the sky (for sunsets and auroras)
+  const lookUp=Math.max(0,.15-pitch)*22;camera.lookAt(tgt.x,tgt.y+lookUp,tgt.z);
   /* sky */
-  const a=time*Math.PI*2,elev=Math.sin(a);
-  if(elev>.25)skyCol.copy(cDay);else if(elev>0)skyCol.copy(cDusk).lerp(cDay,elev/.25);else if(elev>-.2)skyCol.copy(cNight).lerp(cDusk,(elev+.2)/.2);else skyCol.copy(cNight);
-  scene.fog.color.copy(skyCol);
+  const a=time*Math.PI*2,elev=Math.sin(a),hr=hourNow();
+  const wn=weatherNow(),cl=wn.cloud,rn=wn.rain;W_NOW=wn;
+  const glow=skyAt(elev,skyU.top.value,skyU.hor.value)*(1-cl*.8);
+  const grey=_c1.setHex(elev>-.1?0x8f9ba6:0x1b2030);skyU.top.value.lerp(grey,cl*.65+rn*.15);skyU.hor.value.lerp(grey,cl*.5+rn*.2);
+  skyU.glow.value=glow;
+  const sd=new THREE.Vector3(Math.cos(a),Math.sin(a),.35).normalize();skyU.sunDir.value.copy(sd);
+  skyU.sunCol.value.setHex(elev<.15?0xff9a55:0xffe2b0);
+  skyDome.position.copy(camera.position);skyGroup.position.copy(camera.position);
+  skyCol.copy(skyU.hor.value);scene.fog.color.copy(skyCol);
+  scene.fog.far=720-rn*300;scene.fog.near=160-rn*80;
   const night=Math.max(0,Math.min(1,-elev*4));
-  sun.position.set(player.position.x+Math.cos(a)*80,Math.max(8,Math.sin(a)*80),player.position.z+30);sun.target.position.copy(player.position);
-  sun.intensity=Math.max(0,elev)*1.05+(1-night)*.1;
-  hemi.intensity=.24+Math.max(0,elev)*.5;hemi.color.setHex(night>.5?0x7f95c9:0xfff6e0);
-  sunDisc.position.set(Math.cos(a)*300,Math.sin(a)*300,90);sunDisc.visible=elev>-.1;
-  moonDisc.position.set(-Math.cos(a)*300,-Math.sin(a)*300,-60);moonDisc.visible=elev<.1;
-  starMat.opacity=night*.9;torch.intensity=night*.9;
-  waterMat.color.setHex(night>.5?0x1a4a66:0x2a9db0);
+  sun.position.set(player.position.x+sd.x*80,Math.max(8,sd.y*80),player.position.z+sd.z*80);sun.target.position.copy(player.position);
+  sun.color.setHex(elev<.22?0xffa060:0xfff1d0);
+  sun.intensity=(Math.min(1.05,Math.max(0,elev)*3.2)+(1-night)*.12)*(1-cl*.55);
+  hemi.intensity=(.2+night*-.04+Math.min(1,Math.max(0,elev)*3)*.53)*(1-cl*.25);hemi.color.setHex(night>.5?0x7f95c9:elev<.2?0xffd2b0:0xfff6e0);
+  sunDisc.position.copy(camera.position).addScaledVector(sd,1500);sunDisc.visible=elev>-.12&&cl<.9;
+  sunDisc.material.color.setHex(elev<.15?0xffa860:0xfff3b0);
+  moonDisc.position.copy(camera.position).addScaledVector(sd,-1500);moonDisc.visible=elev<.1&&cl<.9;
+  const clear=1-Math.min(1,cl*1.1);
+  starMat.opacity=night*clear*.95;stars.rotation.y=time*.6;torch.intensity=night*.9;
+  // aurora after midnight-ish, shooting stars from late evening; announced once per night
+  const hn=hr>=12?hr-24:hr; // -5 (19시) … 0 (자정) … 5 (새벽 5시)
+  const auroraOn=auroraNight(dayIdx())&&clear>.4?Math.max(0,Math.min(1,(hn+1.2)/.8,(3.6-hn)/.8)):0;
+  auroraU.a.value+=(auroraOn-auroraU.a.value)*Math.min(1,dt*.8);if(night<.6)auroraU.a.value=Math.min(auroraU.a.value,night);
+  auroraU.t.value=t;aurora.visible=auroraU.a.value>.01;
+  if(auroraOn>.5&&nightShow.aurora!==dayIdx()&&started){nightShow.aurora=dayIdx();toast("🌌 하늘에 오로라가 떴다!");log("북쪽 하늘에 오로라가 일렁인다. 넋 놓고 보게 된다.","gold")}
+  if(hn>-3&&hn<4.6&&clear>.35&&Math.random()<dt*(auroraOn>0?.22:.14)){if(shootStar()&&nightShow.meteor!==dayIdx()&&started){nightShow.meteor=dayIdx();log("✨ 별똥별이다! 소원 하나 빌어 볼까.")}}
+  for(const m of meteors){if(m.t>=m.dur){m.l.visible=false;continue}m.t+=dt;const k=m.t/m.dur,pa=m.l.geometry.attributes.position;
+    const hx=m.p.x+m.v.x*m.t,hy=m.p.y+m.v.y*m.t,hz=m.p.z+m.v.z*m.t,tl=Math.min(1,k*3)*.13;
+    pa.setXYZ(0,hx,hy,hz);pa.setXYZ(1,hx-m.v.x*tl,hy-m.v.y*tl,hz-m.v.z*tl);pa.needsUpdate=true;m.l.material.opacity=Math.sin(k*Math.PI)}
+  // clouds drift around the island; more of them as the weather turns
+  cloudMat.color.setHex(0xffffff).lerp(skyU.hor.value,.35).multiplyScalar(1-night*.72-rn*.25);
+  for(const c of clouds){const u=c.userData;u.a+=u.sp*dt;c.position.set(Math.cos(u.a)*u.r,u.y,Math.sin(u.a)*u.r);c.visible=u.need<cl}
+  cloudMat.opacity=.55+cl*.35;
+  // rain falls around the camera
+  rain.visible=rn>.05;
+  if(rain.visible){rain.position.set(camera.position.x,camera.position.y-14,camera.position.z);rain.material.opacity=.45*rn;
+    for(let i=0;i<RAIN_N;i++){let y=rainPos[i*6+1]-dt*42;if(y<0)y+=40;rainPos[i*6+1]=y;rainPos[i*6+4]=y-1.3}rainGeo.attributes.position.needsUpdate=true}
+  waterMat.color.setHex(0x1d93ad).lerp(skyU.hor.value,.28).multiplyScalar(1-night*.55);waterMat.specular.setHex(elev<.15?0xffa070:0x99dddd);
+  // ocean sound gets louder as you near the water
+  const onPierNow=onPier(player.position.x,player.position.z),sdist=onPierNow?0:shoreDist(player.position.x,player.position.z);
+  setAmbience(Math.pow(Math.max(0,1-sdist/48),1.4),rn);
+  if(hr>6.5&&hr<17.5&&sdist<20&&rn<.2&&Math.random()<dt/28)gull();
   if(!reduce)waves(t);
   for(const p of palms){p.crown.rotation.z=Math.sin(t*1.1+p.ph)*.05;p.crown.rotation.x=Math.cos(t*.9+p.ph)*.04;p.cocos.forEach((c,i)=>c.visible=p.cd<=0||i===0&&p.cd<10)}
   /* fire */
@@ -923,7 +1042,6 @@ function update(dt,t){
   if(lit){const fl=1+Math.sin(t*17)*.12;flame1.scale.set(fl,1+Math.sin(t*13)*.15,fl);flame2.scale.set(fl,1+Math.cos(t*15)*.2,fl);fireLight.intensity=1.6+Math.sin(t*20)*.3+night*1.5;
     smoke.forEach((s,i)=>{const k=((t*.35+i/5)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
   else fireLight.intensity=0;
-  hut.visible=S.hut;hutGhost.visible=!S.hut;
   for(const k in decor)decor[k].visible=!!S.decor[k];
   decor.lantern.userData.light.intensity=S.decor.lantern?night*1.6:0;
   decor.flag.userData.flag.rotation.y=Math.sin(t*3)*.25;
@@ -955,8 +1073,9 @@ function update(dt,t){
   else{pr.hidden=true;pr.classList.remove("bite")}
   if(touch){const ok=fishS||(current&&current.l.ok);$("actBtn").style.opacity=ok?1:.45;$("actBtn").textContent=fishS?(fishS.phase==="bite"?"당겨!":"그만"):"행동"}
   /* HUD */
-  const ck=`${Math.floor(hourNow()*6)}|${dayIdx()}|${sn.here}`;
-  if(ck!==clockKey){clockKey=ck;$("clock").innerHTML=`${myDay()}일차 <small>${fmtHour(hourNow())}</small>${sn.here?'<span id="shipDot">⛵ 배 왔다!</span>':""}`}
+  const nightIc=aurora.visible?"🌌":isNightNow()&&W_NOW.w<2?"🌙":WEATHER[W_NOW.w].ic;
+  const ck=`${Math.floor(hourNow()*6)}|${dayIdx()}|${sn.here}|${nightIc}`;
+  if(ck!==clockKey){clockKey=ck;$("clock").innerHTML=`${nightIc} ${myDay()}일차 <small>${fmtHour(hourNow())}</small>${sn.here?'<span id="shipDot">⛵ 배 왔다!</span>':""}`}
   const si=$("shipInfo");if(sn.here){si.textContent=`⛵ 갈매기호가 와 있다! (${Math.round(sn.left)}초 남음)`;si.className="here"}else{si.textContent=nextShipText();si.className=""}
   maybeInv();
   placeTag(meTag,player.position.x,player.position.y+me.rig.position.y+2.75,player.position.z,dt);
