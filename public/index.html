@@ -769,7 +769,7 @@ function animChibi(ch,st,dt,t){
   const {legs,arms,rig,headG,eyes}=ch,moving=st.moving;
   ch.walkPh=moving?ch.walkPh+dt*st.speed*2.1:ch.walkPh*.85;
   const k=moving?1:0,sw=Math.sin(ch.walkPh)*.8*k;
-  legs[0].rotation.x=sw;legs[1].rotation.x=-sw;arms[0].rotation.x=-sw*.9;arms[1].rotation.x=sw*.9;arms[0].rotation.z=.15;arms[1].rotation.z=-.15;
+  legs[0].rotation.x=sw;legs[1].rotation.x=-sw;legs[0].rotation.z=legs[1].rotation.z=0;arms[0].rotation.x=-sw*.9;arms[1].rotation.x=sw*.9;arms[0].rotation.z=.15;arms[1].rotation.z=-.15;
   let bounce=Math.abs(Math.sin(ch.walkPh))*.14*k,squash=1+Math.sin(t*2.2)*.025-(moving?Math.abs(Math.cos(ch.walkPh))*.05:0);
   rig.rotation.set(0,0,moving?Math.sin(ch.walkPh)*.06:0);rig.position.set(0,0,0);headG.rotation.set(0,0,0);
   let eyeOpen=1;ch.rod.visible=!!st.fishing;
@@ -796,6 +796,13 @@ function animChibi(ch,st,dt,t){
       rig.rotation.y=side*.4*reach;rig.rotation.z=-side*.07*reach;headG.rotation.y=side*.3*reach;headG.rotation.z=side*.08;
       legs[side>0?1:0].rotation.x=-.45*reach;legs[side>0?0:1].rotation.x=.1;
       bounce=Math.abs(Math.sin(bt*Math.PI))*.13;squash=1-Math.abs(Math.cos(bt*Math.PI))*.05}
+    if(e.id==="twerk"){ // squat, hands on knees, lean forward and bounce the hips fast; looks over the shoulder now and then
+      const s=Math.sin(et*19),w=Math.sin(et*9.5);
+      rig.rotation.set(.42+s*.06,Math.sin(et*1.6)*.25,w*.07);rig.position.y=-.16;
+      legs[0].rotation.x=legs[1].rotation.x=-.75;legs[0].rotation.z=.15;legs[1].rotation.z=-.15;
+      arms[0].rotation.x=arms[1].rotation.x=-.95;arms[0].rotation.z=.35;arms[1].rotation.z=-.35;
+      headG.rotation.set(-.35,Math.sin(et*.8)>.6?.6:0,-w*.06);
+      bounce=Math.abs(s)*.09;squash=1-Math.abs(s)*.06}
     if(e.id==="web"){const k=Math.min(1,et/.15);arms[1].rotation.x=-1.6*k;arms[1].rotation.z=-.1;arms[0].rotation.x=-.3;rig.rotation.x=.08*k;headG.rotation.x=.05}
     if(e.id==="rock"){const wind=et<.3,k=wind?et/.3:Math.min(1,(et-.3)/.15);
       arms[1].rotation.x=wind?-3.0*k:-3.0+1.9*k;arms[0].rotation.x=wind?.4*k:.4-.8*k;rig.rotation.y=wind?.35*k:.35-.7*k}
@@ -944,9 +951,9 @@ function speak(text,d,who){
     speechSynthesis.speak(u)}catch(e){}}
 
 /* emotes */
-const EMOTES=[{id:"wave",icon:"👋",name:"손 흔들기",dur:2.2},{id:"dance",icon:"💃",name:"춤추기",dur:4},{id:"sit",icon:"🪵",name:"앉기",dur:1e9},{id:"zone",icon:"🌊",name:"멍때리기",dur:5},{id:"play",icon:"🎸",name:"연주",dur:3,need:()=>S.decor.ukulele},
+const EMOTES=[{id:"wave",icon:"👋",name:"손 흔들기",dur:2.2},{id:"dance",icon:"💃",name:"춤추기",dur:4},{id:"twerk",icon:"🍑",name:"트월킹",dur:4},{id:"sit",icon:"🪵",name:"앉기",dur:1e9},{id:"zone",icon:"🌊",name:"멍때리기",dur:5},{id:"play",icon:"🎸",name:"연주",dur:3,need:()=>S.decor.ukulele},
   {id:"web",icon:"🕸️",name:"거미줄",dur:1.1,need:()=>OUTFITS[S.shirt].skill==="web"},{id:"rock",icon:"🪨",name:"돌 던지기",dur:1.1,need:()=>OUTFITS[S.shirt].skill==="rock"}];
-const EMO_ICON={wave:"👋",dance:"💃",sit:"",zone:"🌊",play:"🎶",jump:"",lie:"💤",trade:"🤝"};
+const EMO_ICON={wave:"👋",dance:"💃",twerk:"🍑",sit:"",zone:"🌊",play:"🎶",jump:"",lie:"💤",trade:"🤝"};
 function emoteList(){return EMOTES.filter(e=>!e.need||e.need())}
 let emo=null,lastZone=-99;
 function startEmote(id){if(!started||busyS)return;if(fishS)stopFishing("");
