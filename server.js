@@ -74,6 +74,8 @@ function clean(p) {
     j: num(p.j, 6), // 점프하거나 의자에 앉아 땅에서 떠 있는 높이
     hr: num(p.hr, 9) | 0, bd: num(p.bd, 9) | 0, // 헤어, 수염
     fi: num(p.fi, 30) | 0, // 마지막으로 불 피운 모닥불 번호
+    // 이 사람이 섬에 놓은 물건들: [종류, x, z, 방향] 최대 6개
+    pl: Array.isArray(p.pl) ? p.pl.slice(0, 6).filter((a) => Array.isArray(a) && typeof a[0] === "string").map((a) => [str(a[0], 10), num(a[1], 200), num(a[2], 200), num(a[3], 10)]) : [],
     ...(typeof p.bx === "number" && typeof p.bz === "number" ? { bx: num(p.bx, 300), bz: num(p.bz, 300) } : {}), // 낚시찌 위치
   };
 }

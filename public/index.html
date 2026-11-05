@@ -173,6 +173,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
   <div id="bagPanel" class="panel" hidden>
     <div class="bagHead">🎒 가방<button id="bagClose" class="mini" aria-label="가방 닫기">✕</button></div>
     <div class="res" id="res"></div>
+    <button class="chip" id="invBtn">📦 인벤토리 · 설치하기</button>
     <button class="chip" id="dexBtn"></button>
     <button class="chip" id="hatBtn"></button>
   </div>
@@ -200,6 +201,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="dex" class="overlay" hidden></div>
 <div id="trade" class="overlay" hidden></div>
 <div id="costume" class="overlay" hidden></div>
+<div id="invWin" class="overlay" hidden></div>
 <div id="servers" class="overlay" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -627,31 +629,77 @@ CAMPS.forEach((C0,i)=>{
       else busy(2.2,"나무 비비는 중…",()=>{S.inv.wood-=3;S.fires[i]=Date.now()+180000;S.lastFire=i;log("모닥불이 타닥타닥 붙었다.");beep(330,.3,"sawtooth",.08)})}});
 });
 
-/* decor from the trading ship, set up in the rest area beside the camp fire */
-const decor={};
-function hutPos(dx,dz){const x=HUT.x+dx,z=HUT.z+dz;return[x,groundH(x,z),z]}
-{ // hammock
-  const g=new THREE.Group(),[x,y,z]=hutPos(4.5,1.5);g.position.set(x,y,z);
-  for(const s of [-1,1]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,1.8,6),woodMat));p.position.set(s*1.4,.9,0);g.add(p)}
-  const cloth=sh(new THREE.Mesh(new THREE.SphereGeometry(1.4,16,8,0,Math.PI*2,Math.PI*.6,Math.PI*.4),SM(0xf28b82)));cloth.scale.set(1,.35,.45);cloth.position.y=1.45;cloth.material.side=THREE.DoubleSide;g.add(cloth);
-  scene.add(g);decor.hammock=g;
-  items.push({x,z,r:2.2,label:()=>S.decor.hammock?{t:"해먹에 눕기",ok:true}:null,act:()=>{player.position.set(x,y,z);startEmote("lie")}})}
-{ const g=new THREE.Group(),[x,y,z]=hutPos(-2.6,2.2);g.position.set(x,y,z);
-  const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.6,5),woodMat));p.position.y=.8;g.add(p);
-  const lamp=new THREE.Mesh(new THREE.BoxGeometry(.35,.42,.35),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.y=1.75;g.add(lamp);
-  const l=new THREE.PointLight(0xffc870,0,12,1.6);l.position.y=1.8;g.add(l);g.userData.light=l;scene.add(g);decor.lantern=g}
-{ const g=new THREE.Group(),[x,y,z]=hutPos(2.4,-2.4);g.position.set(x,y,z);
-  const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,3.4,5),M(0xdddddd)));p.position.y=1.7;g.add(p);
-  const f=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.8),SM(0x1f7f8c));f.material.side=THREE.DoubleSide;f.position.set(.66,3,0);g.add(f);g.userData.flag=f;scene.add(g);decor.flag=g}
-{ const bx=PU.x*(PIER_S0-3)+PU.z*4,bz=PU.z*(PIER_S0-3)-PU.x*4,g=new THREE.Group();g.position.set(bx,groundH(bx,bz),bz);
-  const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.6,5),M(0xeeeeee)));p.position.y=1.3;g.add(p);
-  for(let k=0;k<8;k++){const c=new THREE.Mesh(new THREE.ConeGeometry(1.6,.6,3,1,true,k/8*Math.PI*2,Math.PI*2/8),SM(k%2?0xffffff:0xe8604c));c.material.side=THREE.DoubleSide;c.position.y=2.6;g.add(c)}
-  const ch=sh(new THREE.Mesh(new THREE.BoxGeometry(.7,.12,1.3),SM(0x2f7fa0)));ch.position.set(.6,.35,0);ch.rotation.z=-.3;g.add(ch);
-  scene.add(g);decor.parasol=g;
-  items.push({x:bx,z:bz,r:2.2,label:()=>S.decor.parasol?{t:"파라솔 아래 앉기",ok:true}:null,act:()=>startEmote("sit")})}
-{ const cx=PU.x*(PIER_S0-1)-PU.z*6,cz=PU.z*(PIER_S0-1)+PU.x*6,g=new THREE.Group();g.position.set(cx,groundH(cx,cz),cz);const sm=M(0xe9cf96);
-  [[0,0,.7,1.2],[-.9,-.4,.35,.8],[.9,-.3,.35,.8],[0,.9,.35,.7]].forEach(([x,z,r,h])=>{const c=sh(new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.1,h,8),sm));c.position.set(x,h/2,z);g.add(c);const top=new THREE.Mesh(new THREE.ConeGeometry(r*1.1,.4,8),sm);top.position.set(x,h+.2,z);g.add(top)});
-  scene.add(g);decor.castle=g}
+/* placeable items from the trading ship: traded items go to the inventory; you set them down and pick them up again.
+   Everyone on the island sees what you placed (it travels in your presence), only you can pick it up. */
+const DECOR={hammock:{n:"해먹",ic:"🏝️"},lantern:{n:"등불",ic:"🏮"},flag:{n:"깃발",ic:"🚩"},parasol:{n:"파라솔과 의자",ic:"⛱️"},castle:{n:"모래성",ic:"🏰"}};
+const MAX_PLACED=6;
+function buildDecor(kind,x,z,ry){
+  const g=new THREE.Group();g.position.set(x,groundH(x,z),z);g.rotation.y=ry;
+  if(kind==="hammock"){
+    for(const s of [-1,1]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,1.8,6),woodMat));p.position.set(s*1.4,.9,0);g.add(p)}
+    const cloth=sh(new THREE.Mesh(new THREE.SphereGeometry(1.4,16,8,0,Math.PI*2,Math.PI*.6,Math.PI*.4),SM(0xf28b82)));cloth.scale.set(1,.35,.45);cloth.position.y=1.45;cloth.material.side=THREE.DoubleSide;g.add(cloth);
+    for(const s of [-1,1]){const rope=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.5,4),SM(0xe8d8b0));rope.position.set(s*1.25,1.45,0);rope.rotation.z=s*1.1;g.add(rope)}}
+  if(kind==="lantern"){
+    const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,1.6,5),woodMat));p.position.y=.8;g.add(p);
+    const lamp=new THREE.Mesh(new THREE.BoxGeometry(.35,.42,.35),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.y=1.75;g.add(lamp);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(.7,12,8),new THREE.MeshBasicMaterial({color:0xffc870,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));glow.position.y=1.75;g.add(glow);g.userData.glow=glow}
+  if(kind==="flag"){
+    const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,3.4,5),M(0xdddddd)));p.position.y=1.7;g.add(p);
+    const f=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.8),SM(0x1f7f8c));f.material.side=THREE.DoubleSide;f.position.set(.66,3,0);g.add(f);g.userData.flag=f}
+  if(kind==="parasol"){
+    const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.6,5),M(0xeeeeee)));p.position.y=1.3;g.add(p);
+    for(let k=0;k<8;k++){const c=new THREE.Mesh(new THREE.ConeGeometry(1.6,.6,3,1,true,k/8*Math.PI*2,Math.PI*2/8),SM(k%2?0xffffff:0xe8604c));c.material.side=THREE.DoubleSide;c.position.y=2.6;g.add(c)}
+    const ch=sh(new THREE.Mesh(new THREE.BoxGeometry(.7,.12,1.3),SM(0x2f7fa0)));ch.position.set(.6,.35,0);ch.rotation.z=-.3;g.add(ch)}
+  if(kind==="castle"){const sm=M(0xe9cf96);
+    [[0,0,.7,1.2],[-.9,-.4,.35,.8],[.9,-.3,.35,.8],[0,.9,.35,.7]].forEach(([x2,z2,r,h])=>{const c=sh(new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.1,h,8),sm));c.position.set(x2,h/2,z2);g.add(c);const top=new THREE.Mesh(new THREE.ConeGeometry(r*1.1,.4,8),sm);top.position.set(x2,h+.2,z2);g.add(top)})}
+  scene.add(g);return g}
+if(!S.items)S.items={};if(!S.placed)S.placed=[];
+if(!S.migD){for(const k in S.decor)if(DECOR[k]&&S.decor[k])S.items[k]=(S.items[k]||0)+1;S.migD=1}
+const myDecor=new Map();
+function syncMyDecor(){
+  for(const [id,g] of myDecor)if(!S.placed.some(p=>p.id===id)){scene.remove(g);myDecor.delete(id)}
+  for(const p of S.placed)if(!myDecor.has(p.id))myDecor.set(p.id,buildDecor(p.k,p.x,p.z,p.ry))}
+syncMyDecor();
+function ownsKind(k){return (S.items[k]||0)>0||S.placed.some(p=>p.k===k)}
+// every placed item on the island, mine and friends', for interaction prompts
+function decorSpots(){const out=S.placed.map(p=>({...p,key:p.id,mine:true,who:"나"}));
+  remotes.forEach(r=>{for(const d of r.decor||[])out.push({...d,mine:false,who:r.tag.n.textContent})});return out}
+function animDecor(t,night){const each=g=>{if(g.userData.flag)g.userData.flag.rotation.y=Math.sin(t*3+g.position.x)*.25;if(g.userData.glow)g.userData.glow.material.opacity=night*.55};
+  myDecor.forEach(each);remotes.forEach(r=>(r.decor||[]).forEach(d=>each(d.g)))}
+let lieAt=null;
+function hammockBusy(s){if(lieAt===s.key)return false;
+  for(const r of remotes.values())if(r.emo&&r.emo.id==="lie"&&Math.hypot(r.g.position.x-s.x,r.g.position.z-s.z)<1)return true;return false}
+function spotItem(s){
+  const name=DECOR[s.k].n;
+  if(s.k==="hammock")return{x:s.x,z:s.z,r:2.2,label:()=>lieAt===s.key?{t:"일어나기",ok:true}:hammockBusy(s)?{t:"누가 누워 있어요",ok:false}:{t:"해먹에 눕기",ok:true},
+    act:()=>{if(lieAt===s.key){emo=null;lieAt=null;player.position.x+=Math.sin(s.ry)*1.4;player.position.z+=Math.cos(s.ry)*1.4;return}
+      const y=groundH(s.x,s.z);player.position.set(s.x,y,s.z);player.rotation.y=s.ry+Math.PI/2;startEmote("lie");lieAt=s.key}};
+  if(s.k==="parasol")return{x:s.x,z:s.z,r:2.2,label:()=>({t:"파라솔 아래 앉기",ok:true}),
+    act:()=>{const cx=s.x+Math.cos(s.ry)*.6,cz=s.z-Math.sin(s.ry)*.6,y=groundH(cx,cz);player.position.set(cx,y+.28,cz);player.rotation.y=s.ry+Math.PI/2;startEmote("sit");seat={x:cx,z:cz,y:y+.28,ry:s.ry+Math.PI/2}}};
+  if(s.mine)return{x:s.x,z:s.z,r:2,label:()=>({t:`${name} 수거하기`,ok:true}),act:()=>pickUp(s.id)};
+  return{x:s.x,z:s.z,r:2,label:()=>({t:`${s.who}의 ${name}`,ok:false}),act:()=>{}}}
+function placeItem(k){
+  if(!(S.items[k]>0))return;
+  if(S.placed.length>=MAX_PLACED){toast(`한 번에 ${MAX_PLACED}개까지 놓을 수 있어요`);return}
+  const ry=player.rotation.y,x=player.position.x+Math.sin(ry)*2.6,z=player.position.z+Math.cos(ry)*2.6;
+  if(groundH(x,z)<.25||inPond(x,z,1)||onPier(x,z)){toast("여기엔 놓을 수 없어요. 땅 위에서 해 주세요");return}
+  S.items[k]--;S.placed.push({id:Date.now().toString(36)+rand(0,99),k,x:+x.toFixed(2),z:+z.toFixed(2),ry:+(ry+Math.PI).toFixed(2)});
+  syncMyDecor();save();log(`${DECOR[k].n}을(를) 놓았다.`);beep(520,.12);openInvWin()}
+function pickUp(id){const i=S.placed.findIndex(p=>p.id===id);if(i<0)return;const p=S.placed[i];S.placed.splice(i,1);S.items[p.k]=(S.items[p.k]||0)+1;
+  syncMyDecor();save();log(`${DECOR[p.k].n}을(를) 가방에 넣었다.`);beep(660,.1);if(!$("invWin").hidden)openInvWin()}
+function openInvWin(){
+  const el=$("invWin"),owned=Object.keys(DECOR).filter(k=>S.items[k]>0);
+  el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h3>인벤토리</h3><button class="btn" id="ivClose">닫기</button></div>
+    <b style="font-family:var(--display);font-size:1.1rem">갖고 있는 물건</b>
+    ${owned.length?owned.map(k=>`<div class="offer"><b>${DECOR[k].ic} ${DECOR[k].n} <small style="font-family:var(--body)">×${S.items[k]}</small></b><small>내 앞 땅에 놓아요</small><button class="btn main" data-place="${k}">설치</button></div>`).join("")
+      :`<p style="font-size:.85rem;color:var(--ink-soft)">아직 없어요. 갈매기호 선장과 물물교환하면 생겨요.</p>`}
+    ${S.decor.ukulele?`<div class="offer"><b>🎸 우쿨렐레</b><small>왼쪽 메뉴에서 연주할 수 있어요</small></div>`:""}
+    <b style="font-family:var(--display);font-size:1.1rem">설치한 물건 ${S.placed.length}/${MAX_PLACED}</b>
+    ${S.placed.length?S.placed.map(p=>`<div class="offer"><b>${DECOR[p.k].ic} ${DECOR[p.k].n}</b><small>여기서 ${Math.round(Math.hypot(p.x-player.position.x,p.z-player.position.z))}m · 다른 사람도 볼 수 있어요</small><button class="btn" data-pick="${p.id}">수거</button></div>`).join("")
+      :`<p style="font-size:.85rem;color:var(--ink-soft)">설치한 물건이 없어요.</p>`}</div>`;
+  el.hidden=false;$("ivClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
+  el.querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>placeItem(b.dataset.place));
+  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>pickUp(b.dataset.pick))}
 
 /* crab */
 const crab=new THREE.Group();scene.add(crab);
@@ -810,7 +858,10 @@ function animChibi(ch,st,dt,t){
     if(e.id==="zone"){headG.rotation.z=.22;headG.rotation.x=-.12;eyeOpen=.45}
     if(e.id==="jump"){bounce=Math.sin(Math.min(1,et/.7)*Math.PI)*1.3;squash=et<.08?.85:1.06;arms[0].rotation.z=-2.7;arms[1].rotation.z=2.7}
     if(e.id==="play"){arms[0].rotation.x=-1.1;arms[1].rotation.x=-.8;arms[1].rotation.z=-.6+Math.sin(et*14)*.25;headG.rotation.z=Math.sin(et*3)*.12;eyeOpen=.3}
-    if(e.id==="lie"){rig.rotation.x=-Math.PI/2+.15;rig.position.set(0,1.55,-.7);eyeOpen=.1;legs[0].rotation.x=legs[1].rotation.x=0;arms[0].rotation.x=arms[1].rotation.x=0;bounce=0;squash=1+Math.sin(t*1.5)*.02}
+    if(e.id==="lie"){ // on the back along the hammock, sunk into the cloth, hands on the belly, gently swaying
+      rig.rotation.set(-Math.PI/2+.08,0,Math.sin(t*.9)*.05);rig.position.set(0,1.22,1.1);eyeOpen=.08;
+      legs[0].rotation.x=legs[1].rotation.x=.1;arms[0].rotation.x=arms[1].rotation.x=-.5;arms[0].rotation.z=.7;arms[1].rotation.z=-.7;
+      headG.rotation.x=.25;bounce=0;squash=1+Math.sin(t*1.5)*.02}
     if(e.id==="trade"){arms[1].rotation.x=-1.3;headG.rotation.x=.1}}
   if(st.air){arms[0].rotation.z=-2.4;arms[1].rotation.z=2.4;legs[0].rotation.x=-.7;legs[1].rotation.x=.35;bounce=0;squash=1.05}
   rig.position.y+=bounce;const q=1/Math.sqrt(squash);rig.scale.set(q,squash,q);
@@ -860,7 +911,7 @@ function nextShipText(){const now=Date.now()/1000,d0=Math.floor(now/DAY_LEN),tt=
 function fmtHour(h){const hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;return`${hh<12?"오전":"오후"} ${((hh+11)%12)+1}:${String(mm).padStart(2,"0")}`}
 function offersFor(d){let s=hash(d*13+5)||1;const r=()=>{s=Math.imul(s,1103515245)+12345>>>0;return s/4294967296};
   const idx=POOL.map((_,i)=>i).sort(()=>r()-.5);
-  return idx.filter(i=>{const g=POOL[i].get;return !(g.decor&&S.decor[g.decor])&&!(g.hat!=null&&S.hats.includes(g.hat))&&!(g.rod&&S.rod)}).slice(0,4)}
+  return idx.filter(i=>{const g=POOL[i].get;return !(g.decor&&(g.decor==="ukulele"?S.decor.ukulele:ownsKind(g.decor)))&&!(g.hat!=null&&S.hats.includes(g.hat))&&!(g.rod&&S.rod)}).slice(0,4)}
 let shipWas=false;
 const DOCK={x:PU.x*(PIER_S0+PIER_LEN+3),z:PU.z*(PIER_S0+PIER_LEN+3)};
 items.push({get x(){return PIER_END.x},get z(){return PIER_END.z},r:3,label:()=>shipNow().here?{t:"선장과 물물교환",ok:true}:null,act:()=>openTrade()});
@@ -873,8 +924,8 @@ addEventListener("keydown",e=>{
   keys[e.code]=true;
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code))e.preventDefault();
   if(!started)return;
-  if(e.code==="Escape"){$("dex").hidden=true;$("trade").hidden=true;$("servers").hidden=true;$("costume").hidden=true}
-  if(!$("dex").hidden||!$("trade").hidden||!$("servers").hidden||!$("costume").hidden)return;
+  if(e.code==="Escape"){$("dex").hidden=true;$("trade").hidden=true;$("servers").hidden=true;$("costume").hidden=true;$("invWin").hidden=true}
+  if(!$("dex").hidden||!$("trade").hidden||!$("servers").hidden||!$("costume").hidden||!$("invWin").hidden)return;
   if(e.code==="KeyE")doAct();
   if(e.code==="Enter"){e.preventDefault();openChat()}
   if(e.code==="KeyB")openDex();
@@ -901,6 +952,7 @@ let running=false;
  const rel=e=>{if(e.pointerId!==jid)return;jid=null;knob.style.transform="";joyV={x:0,y:0}};
  joy.addEventListener("pointerup",rel);joy.addEventListener("pointercancel",rel)}
 $("prompt").onclick=()=>doAct();
+$("invBtn").onclick=()=>{openBag(false);openInvWin()};
 $("dexBtn").onclick=()=>{openBag(false);openDex()};
 /* bag + collapsible island info */
 function openBag(on){$("bagPanel").hidden=!on;$("bagBtn").hidden=on;$("bagBtn").setAttribute("aria-expanded",on);if(on)renderInv()}
@@ -1111,7 +1163,7 @@ function doTrade(i,d){
   const o=POOL[i];if(!Object.entries(o.give).every(([id,n])=>have(id)>=n))return;
   for(const [id,n] of Object.entries(o.give)){if(id in RES_N)S.inv[id]-=n;else S.fish[id]-=n}
   const g=o.get;
-  if(g.decor){S.decor[g.decor]=true;if(g.decor==="ukulele")renderEmotes()}
+  if(g.decor){if(g.decor==="ukulele"){S.decor.ukulele=true;renderEmotes()}else{S.items[g.decor]=(S.items[g.decor]||0)+1;toast(`${DECOR[g.decor].n}이(가) 인벤토리에 들어갔어요. 가방 → 인벤토리에서 설치!`)}}
   if(g.hat!=null){S.hats.push(g.hat);S.hat=g.hat;me.setHat(g.hat)}
   if(g.rod){S.rod=1;me.setRod(1)}
   for(const k of Object.keys(RES_N))if(g[k])S.inv[k]+=g[k];
@@ -1139,8 +1191,14 @@ function upRemote(p){
     if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
       if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
   r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);r.fi=Math.abs(num(pr.fi,0,99)|0)%CAMPS.length;
+  // what this friend has set down on the island
+  const pk=JSON.stringify(pr.pl||[]);
+  if(pk!==r.plKey){r.plKey=pk;(r.decor||[]).forEach(d=>scene.remove(d.g));r.decor=[];
+    (Array.isArray(pr.pl)?pr.pl:[]).slice(0,MAX_PLACED).forEach((a,i)=>{if(!Array.isArray(a)||!DECOR[a[0]])return;
+      const x=num(a[1],0,200),z=num(a[2],0,200),ry=num(a[3],0,10);if(!Number.isFinite(groundH(x,z)))return;
+      r.decor.push({k:a[0],x,z,ry,key:p.peer+":"+i,g:buildDecor(a[0],x,z,ry)})})}
 }
-function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);if(r.gear){scene.remove(r.gear.b);scene.remove(r.gear.l)}r.tag.el.remove();remotes.delete(peer)}
+function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);(r.decor||[]).forEach(d=>scene.remove(d.g));if(r.gear){scene.remove(r.gear.b);scene.remove(r.gear.l)}r.tag.el.remove();remotes.delete(peer)}
 function setWho(){const w=$("who");if(chan){w.classList.add("on");$("whoText").textContent=`${chanName} · ${remotes.size+1}/${CAP}명 ▾`}else{w.classList.remove("on");$("whoText").textContent="혼자 있는 섬"}}
 $("who").onclick=()=>openServers();
 /* public server: one WebSocket to our own server at /ws */
@@ -1179,7 +1237,7 @@ function sendPresence(){
   if(!chan||!online())return;
   const P={n:S.nick,c:S.shirt,h:S.hat,hr:S.hair,bd:S.beard,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
     a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fires[S.lastFire|0]||0,fi:S.lastFire|0,
-    j:+liftY.toFixed(2)};
+    j:+liftY.toFixed(2),pl:S.placed.map(p=>[p.k,+(+p.x).toFixed(1),+(+p.z).toFixed(1),+(+p.ry).toFixed(2)])};
   if(fishS){P.bx=+fishS.bx.toFixed(2);P.bz=+fishS.bz.toFixed(2)}
   const k=JSON.stringify(P);if(k===sentKey)return;sentKey=k;ws.send(JSON.stringify({t:"p",p:P}));
 }
@@ -1200,7 +1258,7 @@ function timeNow(){return (Date.now()/1000%DAY_LEN)/DAY_LEN}
 function hourNow(){return (6+timeNow()*24)%24}
 let last=performance.now(),saveT=0,mapT=1,clockKey="";
 function update(dt,t){
-  const playing=started&&$("dex").hidden&&$("trade").hidden&&$("servers").hidden&&$("costume").hidden;
+  const playing=started&&$("dex").hidden&&$("trade").hidden&&$("servers").hidden&&$("costume").hidden&&$("invWin").hidden;
   const time=timeNow();
   /* respawns */
   for(const p of palms)if(p.cd>0)p.cd-=dt;
@@ -1237,6 +1295,7 @@ function update(dt,t){
   if(emo){emo.t+=dt;maybeFire(emo,me);if(emo.t>emo.dur)emo=null}
   updShots(dt);
   if(seat&&!(emo&&emo.id==="sit"))seat=null;
+  if(lieAt&&!(emo&&emo.id==="lie"))lieAt=null;
   animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite",air:jumpY>.05,cast:myGear.cast},dt,t);
   const baseY=groundBase(player.position.x,player.position.z);
   player.position.y=(seat?seat.y:baseY)+jumpY;
@@ -1317,9 +1376,7 @@ function update(dt,t){
     if(lit){const fl=1+Math.sin(t*17+ci)*.12;C0.f1.scale.set(fl,1+Math.sin(t*13+ci)*.15,fl);C0.f2.scale.set(fl,1+Math.cos(t*15+ci)*.2,fl);C0.light.intensity=1.6+Math.sin(t*20+ci)*.3+night*1.5;
       C0.smoke.forEach((s,i)=>{const k=((t*.35+i/4)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
     else C0.light.intensity=0});
-  for(const k in decor)decor[k].visible=!!S.decor[k];
-  decor.lantern.userData.light.intensity=S.decor.lantern?night*1.6:0;
-  decor.flag.userData.flag.rotation.y=Math.sin(t*3)*.25;
+  animDecor(t,night);
   /* crab */
   if(C.wait>0)C.wait-=dt;else{const dx=C.tx-C.x,dz=C.tz-C.z,d=Math.hypot(dx,dz);
     if(d<.3){const cur=Math.atan2(C.z,C.x),an=cur+(Math.random()-.5)*.5,rr=rAt(an,.6)-Math.random()*4;C.tx=Math.cos(an)*rr;C.tz=Math.sin(an)*rr;C.wait=1+Math.random()*3}
@@ -1339,7 +1396,7 @@ function update(dt,t){
   /* interaction prompt */
   current=null;
   if(playing&&!busyS&&!fishS){let bd=1e9;
-    for(const it of items){const d=Math.hypot(it.x-player.position.x,it.z-player.position.z);if(d<it.r&&d<bd){const l=it.label();if(l){current={it,l};bd=d}}}
+    for(const it of [...items,...decorSpots().map(spotItem)]){const d=Math.hypot(it.x-player.position.x,it.z-player.position.z);if(d<it.r&&d<bd){const l=it.label();if(l){current={it,l};bd=d}}}
     if(!current&&nearWater())current={it:fishItem,l:{t:"낚시하기",ok:true}}}
   const pr=$("prompt");
   if(typing()||!$("chatForm").hidden)pr.hidden=true;
