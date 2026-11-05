@@ -27,19 +27,33 @@ body{font-family:var(--body);font-size:14px;-webkit-user-select:none;user-select
 #game{position:fixed;inset:0}
 #game canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 .panel{background:var(--panel);border:2px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 rgba(43,42,38,.35)}
-#hud{position:fixed;top:var(--st);left:var(--sl);padding:8px 10px;width:min(210px,46vw);display:flex;flex-direction:column;gap:5px}
-#who{font-size:.78rem;display:flex;align-items:center;gap:6px}
-#who i{width:8px;height:8px;border-radius:50%;background:#9a958a;display:inline-block}
+#hud{position:fixed;top:var(--st);left:var(--sl);padding:5px 8px;max-width:min(210px,52vw);display:flex;flex-direction:column;gap:3px}
+.hudtop{display:flex;align-items:center;gap:4px}
+#who{font-size:.74rem;display:flex;align-items:center;gap:5px;padding:2px 8px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#who i{width:7px;height:7px;border-radius:50%;background:#9a958a;display:inline-block;flex:none}
 #who.on i{background:#3fbf6a;box-shadow:0 0 0 3px rgba(63,191,106,.2)}
-#clock{font-family:var(--display);font-size:1.3rem;line-height:1.1;font-weight:700}
-#clock small{font-weight:400;color:var(--ink-soft);font-size:1rem}
+.mini{font:inherit;font-size:.8rem;line-height:1;background:#fffaf0;color:var(--ink);border:1.5px solid var(--ink);border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+#hudToggle{transition:transform .2s}
+#hud.open #hudToggle{transform:rotate(180deg)}
+#hudMore{display:flex;flex-direction:column;gap:4px}
+#hud:not(.open) #hudMore{display:none}
+#clock{font-family:var(--display);font-size:1.05rem;line-height:1.1;font-weight:700;white-space:nowrap}
+#clock small{font-weight:400;color:var(--ink-soft);font-size:.9rem}
+#shipDot{color:var(--coral);font-size:.85rem;margin-left:4px}
+#hud.open #shipDot{display:none}
 #shipInfo{font-size:.78rem;color:var(--ink-soft)}
 #shipInfo.here{color:var(--coral);font-weight:700}
 .maprow{display:flex;gap:8px;align-items:flex-start}
 #map{width:84px;height:84px;flex:none}
 .legend{display:flex;flex-direction:column;gap:1px;font-size:.68rem;color:var(--ink-soft);min-width:0}
 .legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
-#inv{position:fixed;top:var(--st);right:var(--sr);display:flex;flex-direction:column;gap:5px;align-items:flex-end;max-width:50vw}
+#inv{position:fixed;top:var(--st);right:var(--sr);display:flex;flex-direction:column;align-items:flex-end}
+#bagBtn{font:inherit;font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:4px;padding:4px 12px 4px 8px;border-radius:999px;cursor:pointer}
+#bagBtn span{font-size:1.35rem;line-height:1}
+#bagPanel{padding:8px 10px;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:min(240px,70vw)}
+#bagPanel .bagHead{display:flex;justify-content:space-between;align-items:center;font-family:var(--display);font-size:1.15rem;font-weight:700}
+#bagPanel button.chip{text-align:left;white-space:normal}
+#bagPanel .res{justify-content:flex-start}
 .chip{font:inherit;font-size:.85rem;background:var(--panel);color:var(--ink);border:1.5px solid var(--ink);border-radius:14px;padding:3px 10px;font-variant-numeric:tabular-nums;white-space:nowrap}
 button.chip{cursor:pointer;border-color:var(--sea);border-width:2px}
 button.chip:disabled{opacity:.45;cursor:not-allowed}
@@ -116,19 +130,28 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="tags"></div>
 
 <div id="hud" class="panel">
-  <button id="who" class="chip" style="align-self:flex-start;display:flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer"><i></i><span id="whoText">혼자 있는 섬</span></button>
+  <div class="hudtop">
+    <button id="who" class="chip"><i></i><span id="whoText">혼자 있는 섬</span></button>
+    <button id="hudToggle" class="mini" aria-expanded="false" aria-label="섬 정보 펼치기">▾</button>
+  </div>
   <div id="clock"></div>
-  <div id="shipInfo"></div>
-  <div class="maprow"><canvas id="map" width="120" height="120" aria-label="섬 지도"></canvas>
-    <div class="legend"><span><i style="background:#ff7a1a"></i>모닥불</span><span><i style="background:#8a5a2a"></i>오두막</span><span><i style="background:#a07a46"></i>선착장</span><span><i style="background:#d9533a"></i>꽃게 씨</span><span><i style="background:#ffffff;border:1px solid #2b2a26"></i>친구</span>
-    <button class="chip" id="mute" style="font-size:.72rem;padding:1px 8px;margin-top:2px;align-self:flex-start">🔊 소리</button></div></div>
+  <div id="hudMore">
+    <div id="shipInfo"></div>
+    <div class="maprow"><canvas id="map" width="120" height="120" aria-label="섬 지도"></canvas>
+      <div class="legend"><span><i style="background:#ff7a1a"></i>모닥불</span><span><i style="background:#8a5a2a"></i>오두막</span><span><i style="background:#a07a46"></i>선착장</span><span><i style="background:#d9533a"></i>꽃게 씨</span><span><i style="background:#ffffff;border:1px solid #2b2a26"></i>친구</span>
+      <button class="chip" id="mute" style="font-size:.72rem;padding:1px 8px;margin-top:2px;align-self:flex-start">🔊 소리</button></div></div>
+  </div>
 </div>
 
 <div id="inv">
-  <button class="chip" id="dexBtn"></button>
-  <button class="chip" id="hatBtn"></button>
-  <button class="chip" id="sendBottle"></button>
-  <div class="res" id="res"></div>
+  <button id="bagBtn" class="panel" aria-expanded="false"><span>🎒</span>가방</button>
+  <div id="bagPanel" class="panel" hidden>
+    <div class="bagHead">🎒 가방<button id="bagClose" class="mini" aria-label="가방 닫기">✕</button></div>
+    <div class="res" id="res"></div>
+    <button class="chip" id="dexBtn"></button>
+    <button class="chip" id="hatBtn"></button>
+    <button class="chip" id="sendBottle"></button>
+  </div>
 </div>
 
 <div id="log"></div>
@@ -159,7 +182,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 const $=id=>document.getElementById(id);
 const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const chance=p=>Math.random()<p;
-const DAY_LEN=240,R=55,CAP=100,KEY="island-diary-play-v1";
+const DAY_LEN=600,R=55,CAP=100,KEY="island-diary-play-v1";
 const touch=('ontouchstart' in window)||matchMedia('(pointer:coarse)').matches;
 if(touch)document.body.classList.add("touch");
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -222,7 +245,7 @@ const NICK_A=["졸린","배고픈","씩씩한","멍때리는","햇볕 탄","소�
 function dayIdx(){return Math.floor(Date.now()/1000/DAY_LEN)}
 function fresh(){return{nick:NICK_A[rand(0,7)]+" "+NICK_B[rand(0,7)],shirt:rand(0,SHIRTS.length-1),hat:0,hats:[0],
   inv:{coconut:0,wood:0,leaf:0,shell:0,bottle:1},fish:{},dex:{},decor:{},rod:0,hut:false,crab:0,
-  traded:{},pend:[],first:dayIdx(),px:null,pz:null,fireUntil:0,
+  traded:{},pend:[],firstMs:Date.now(),px:null,pz:null,fireUntil:0,
   log:[{t:"파도 소리에 눈을 떴다. 오늘은 뭐 하고 놀까.",c:""}]}}
 let S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
@@ -230,6 +253,9 @@ if(window.claude?.hot?.data?.S)S=window.claude.hot.data.S;
 if(!S||!S.inv)S=fresh();
 window.claude?.hot?.snapshot?.(()=>({S}));
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+// days on the island since first visit (survives changes to DAY_LEN)
+if(!S.firstMs)S.firstMs=Date.now();
+function myDay(){const startDay=Math.floor(S.firstMs/1000/DAY_LEN);return Math.max(1,dayIdx()-startDay+1)}
 function startSpot(){S.px=0;S.pz=rAt(Math.PI/2,1.1)}
 if(S.px==null)startSpot();
 function have(id){return (id in S.inv?S.inv[id]:S.fish[id])||0}
@@ -609,7 +635,14 @@ if(touch){$("joy").hidden=false;$("actBtn").hidden=false}
  const rel=e=>{if(e.pointerId!==jid)return;jid=null;knob.style.transform="";joyV={x:0,y:0}};
  joy.addEventListener("pointerup",rel);joy.addEventListener("pointercancel",rel)}
 $("actBtn").onclick=()=>doAct();$("prompt").onclick=()=>doAct();
-$("sendBottle").onclick=()=>sendBottle();$("dexBtn").onclick=()=>openDex();
+$("sendBottle").onclick=()=>sendBottle();$("dexBtn").onclick=()=>{openBag(false);openDex()};
+/* bag + collapsible island info */
+function openBag(on){$("bagPanel").hidden=!on;$("bagBtn").hidden=on;$("bagBtn").setAttribute("aria-expanded",on);if(on)renderInv()}
+$("bagBtn").onclick=()=>openBag(true);$("bagClose").onclick=()=>openBag(false);
+cvs.addEventListener("pointerdown",()=>{if(!$("bagPanel").hidden)openBag(false)});
+function setHud(open){$("hud").classList.toggle("open",open);$("hudToggle").setAttribute("aria-expanded",open);$("hudToggle").setAttribute("aria-label",open?"섬 정보 접기":"섬 정보 펼치기");try{localStorage.setItem("island-hud-open",open?"1":"0")}catch(e){}}
+{let o=null;try{o=localStorage.getItem("island-hud-open")}catch(e){}setHud(o==null?!touch:o==="1")}
+$("hudToggle").onclick=()=>setHud(!$("hud").classList.contains("open"));
 $("hatBtn").onclick=()=>{if(S.hats.length<2)return;const i=S.hats.indexOf(S.hat);S.hat=S.hats[(i+1)%S.hats.length];me.setHat(S.hat);save();renderInv()};
 
 /* chat */
@@ -844,7 +877,8 @@ function update(dt,t){
   const mag=Math.hypot(mx,mz),moving=mag>.05;let spd=0;
   if(moving){
     if(fishS)stopFishing("");emo=null;
-    spd=(keys.ShiftLeft||keys.ShiftRight||Math.hypot(joyV.x,joyV.y)>.95?10.5:6);const sp=spd*dt;
+    const jm=Math.hypot(joyV.x,joyV.y);
+    spd=jm>.05?1.5+Math.min(1,jm)*2.8:(keys.ShiftLeft||keys.ShiftRight?10.5:6);const sp=spd*dt;
     let nx=player.position.x+mx*sp,nz=player.position.z+mz*sp;
     for(const c of colliders){if(c.need&&!c.need())continue;const dx=nx-c.x,dz=nz-c.z,d=Math.hypot(dx,dz),min=c.r+.4;if(d<min&&d>0){nx=c.x+dx/d*min;nz=c.z+dz/d*min}}
     if(groundH(nx,nz)>-.4||onPier(nx,nz)){player.position.x=nx;player.position.z=nz}
@@ -921,8 +955,8 @@ function update(dt,t){
   else{pr.hidden=true;pr.classList.remove("bite")}
   if(touch){const ok=fishS||(current&&current.l.ok);$("actBtn").style.opacity=ok?1:.45;$("actBtn").textContent=fishS?(fishS.phase==="bite"?"당겨!":"그만"):"행동"}
   /* HUD */
-  const ck=`${Math.floor(hourNow()*6)}|${dayIdx()}`;
-  if(ck!==clockKey){clockKey=ck;$("clock").innerHTML=`${dayIdx()-S.first+1}일차 <small>${fmtHour(hourNow())}</small>`}
+  const ck=`${Math.floor(hourNow()*6)}|${dayIdx()}|${sn.here}`;
+  if(ck!==clockKey){clockKey=ck;$("clock").innerHTML=`${myDay()}일차 <small>${fmtHour(hourNow())}</small>${sn.here?'<span id="shipDot">⛵ 배 왔다!</span>':""}`}
   const si=$("shipInfo");if(sn.here){si.textContent=`⛵ 갈매기호가 와 있다! (${Math.round(sn.left)}초 남음)`;si.className="here"}else{si.textContent=nextShipText();si.className=""}
   maybeInv();
   placeTag(meTag,player.position.x,player.position.y+me.rig.position.y+2.75,player.position.z,dt);
