@@ -1,0 +1,16 @@
+{
+  "name": "island-diary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "무인도 일기 - 친구들과 같은 섬에서 노는 3D 웹 게임",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}

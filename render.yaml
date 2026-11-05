@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: island-diary
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: ISLAND_CAP
+        value: "100"
+      - key: MAX_ISLANDS
+        value: "20"
