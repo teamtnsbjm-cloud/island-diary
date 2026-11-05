@@ -89,6 +89,8 @@ button.chip:disabled{opacity:.45;cursor:not-allowed}
 #knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:var(--panel);border:2px solid var(--ink)}
 #runBtn{position:fixed;right:calc(var(--sr) + 8px);bottom:calc(var(--sb) + 18px);width:78px;height:78px;border-radius:50%;font-family:var(--display);font-size:1.15rem;font-weight:700;cursor:pointer;color:var(--ink);touch-action:none;-webkit-tap-highlight-color:transparent}
 #runBtn.on{background:#ffe08a;transform:scale(.94)}
+#jumpBtn{position:fixed;right:calc(var(--sr) + 20px);bottom:calc(var(--sb) + 110px);width:56px;height:56px;border-radius:50%;font-family:var(--display);font-size:1rem;font-weight:700;cursor:pointer;color:var(--ink);touch-action:none;-webkit-tap-highlight-color:transparent}
+#jumpBtn:active{background:#bfe8f5;transform:scale(.92)}
 /* phone: emotes stack on the left edge, action prompt sits between the stick and the run button */
 body.touch #emotes{left:var(--sl);top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;padding:6px 3px;border-radius:22px;max-width:none}
 body.touch .emo{padding:4px 6px}
@@ -168,6 +170,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="emotes" class="panel"></div>
 <div id="joy" hidden><div id="knob"></div></div>
 <button id="runBtn" class="panel" hidden>달리기</button>
+<button id="jumpBtn" class="panel" hidden>점프</button>
 
 <div id="title" class="overlay">
   <div class="card">
@@ -445,20 +448,26 @@ function waves(t){const p=wGeo.attributes.position;
 let seed=7;const srnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
 const items=[],colliders=[];
 const CAMP={x:3,z:8},HUT={x:-7,z:3};
-/* pier */
-const PIER_A=-.5,PIER_S0=rAt(PIER_A,.35)-3,PIER_LEN=14,PIER_W=1.4,PU={x:Math.cos(PIER_A),z:Math.sin(PIER_A)};
-function onPier(x,z){const s=x*PU.x+z*PU.z,w=Math.abs(-x*PU.z+z*PU.x);return s>PIER_S0&&s<PIER_S0+PIER_LEN&&w<PIER_W}
+/* piers: the first is where the trading ship docks, the others are just for fishing */
+const PIER_W=1.4;
+const PIERS=[{a:-.5,len:14},{a:1.85,len:13},{a:3.7,len:13}].map(p=>({...p,u:{x:Math.cos(p.a),z:Math.sin(p.a)},s0:rAt(p.a,.35)-3}));
+const PIER_A=PIERS[0].a,PIER_S0=PIERS[0].s0,PIER_LEN=PIERS[0].len,PU=PIERS[0].u;
+function pierAt(x,z){for(const p of PIERS){const s=x*p.u.x+z*p.u.z,w=Math.abs(-x*p.u.z+z*p.u.x);if(s>p.s0&&s<p.s0+p.len&&w<PIER_W)return p}return null}
+function onPier(x,z){return !!pierAt(x,z)}
 const PIER_END={x:PU.x*(PIER_S0+PIER_LEN-1.5),z:PU.z*(PIER_S0+PIER_LEN-1.5)};
-const taken=[[CAMP.x,CAMP.z,4],[HUT.x,HUT.z,8],[0,rAt(Math.PI/2,1.1),3],[PU.x*(PIER_S0-2),PU.z*(PIER_S0-2),7]];
+const taken=[[CAMP.x,CAMP.z,6],[HUT.x,HUT.z,8],[0,rAt(Math.PI/2,1.1),3],...PIERS.map(p=>[p.u.x*(p.s0-2),p.u.z*(p.s0-2),7])];
 function freeSpot(rmin,rmax,gap,minH){for(let n=0;n<400;n++){const a=srnd()*Math.PI*2,r=(rmin+srnd()*(rmax-rmin))*R,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(groundH(x,z)>(minH??.9)&&taken.every(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)>tr+gap)){taken.push([x,z,gap]);return{x,z}}}return{x:0,z:0}}
 
 const woodMat=M(0x7a5530);
-{const pier=new THREE.Group();scene.add(pier);
- const len=PIER_LEN,deck=sh(new THREE.Mesh(new THREE.BoxGeometry(len,.18,PIER_W*2),M(0xa47b4a)));
- deck.position.set(PU.x*(PIER_S0+len/2),.5,PU.z*(PIER_S0+len/2));deck.rotation.y=-PIER_A;pier.add(deck);
+for(const P of PIERS){const pier=new THREE.Group();scene.add(pier);const {u,s0,len}=P;
+ const deck=sh(new THREE.Mesh(new THREE.BoxGeometry(len,.18,PIER_W*2),M(0xa47b4a)));
+ deck.position.set(u.x*(s0+len/2),.5,u.z*(s0+len/2));deck.rotation.y=-P.a;pier.add(deck);
  for(let s=0;s<=len;s+=3.5)for(const w of [-1,1]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,2.4,6),woodMat));
-   const ss=PIER_S0+s;p.position.set(PU.x*ss-PU.z*w*PIER_W,-.4,PU.z*ss+PU.x*w*PIER_W);pier.add(p)}}
+   const ss=s0+s;p.position.set(u.x*ss-u.z*w*PIER_W,-.4,u.z*ss+u.x*w*PIER_W);pier.add(p)}
+ // a lantern post at the end of each fishing pier
+ if(P!==PIERS[0]){const e=s0+len-.4,post=sh(new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,1.6,5),woodMat));post.position.set(u.x*e-u.z*1.1,1.4,u.z*e+u.x*1.1);pier.add(post);
+   const lamp=new THREE.Mesh(new THREE.BoxGeometry(.26,.3,.26),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.set(post.position.x,2.3,post.position.z);pier.add(lamp)}}
 
 /* palms */
 const trunkMat=M(0x8a6a3e),leafMat=M(0x3f8a3a),cocoMat=M(0x6b4a24);
@@ -517,7 +526,19 @@ for(let i=0;i<40;i++){const a=srnd()*Math.PI*2,r=rAt(a,.45)-srnd()*3,x=Math.cos(
 const camp=new THREE.Group();camp.position.set(CAMP.x,groundH(CAMP.x,CAMP.z),CAMP.z);scene.add(camp);
 for(let k=0;k<8;k++){const a=k/8*Math.PI*2,st=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),M(0x8d8a80)));st.position.set(Math.cos(a)*.8,.12,Math.sin(a)*.8);camp.add(st)}
 for(let k=0;k<3;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,1.1,5),woodMat);l.rotation.z=Math.PI/2;l.rotation.y=k*1.05;l.position.y=.12;camp.add(l)}
-for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,lg=sh(new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.6,6),woodMat));lg.rotation.z=Math.PI/2;lg.rotation.y=-a;lg.position.set(Math.cos(a)*2.4,.22,Math.sin(a)*2.4);camp.add(lg)}
+/* log seats: around the fire, on the hill lookout, and on the beach facing the sea */
+let seat=null;
+function makeLogSeat(x,z,ry){
+  const y=groundH(x,z),g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=ry;scene.add(g);
+  const lg=sh(new THREE.Mesh(new THREE.CylinderGeometry(.26,.28,1.8,8),woodMat));lg.rotation.z=Math.PI/2;lg.position.y=.26;g.add(lg);
+  for(const s of [-1,1]){const ring=new THREE.Mesh(new THREE.CircleGeometry(.25,8),M(0xd9b27a));ring.position.set(s*.905,.26,0);ring.rotation.y=s*Math.PI/2;g.add(ring)}
+  const st={x,z,y:y+.32,ry};
+  items.push({x,z,r:1.7,label:()=>({t:"통나무 의자에 앉기",ok:true}),act:()=>{player.position.set(x,st.y,z);player.rotation.y=ry;startEmote("sit");seat=st}});
+}
+for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4,x=CAMP.x+Math.cos(a)*2.7,z=CAMP.z+Math.sin(a)*2.7;makeLogSeat(x,z,Math.atan2(CAMP.x-x,CAMP.z-z))}
+{const top={x:24,z:-38},o=Math.atan2(28,-44),px=Math.cos(o),pz=-Math.sin(o); // lookout on the big hill, facing out to sea
+ [-1.2,1.2].forEach(s=>makeLogSeat(top.x+px*s,top.z+pz*s,o))}
+{const r=rAt(Math.PI/2,1.4);[-1.3,1.3].forEach(s=>makeLogSeat(6+s*1.9,r,0))}
 const flame1=new THREE.Mesh(new THREE.ConeGeometry(.42,1.2,6),new THREE.MeshBasicMaterial({color:0xf08a2c}));flame1.position.y=.7;
 const flame2=new THREE.Mesh(new THREE.ConeGeometry(.24,.8,6),new THREE.MeshBasicMaterial({color:0xffd25a}));flame2.position.y=.55;
 camp.add(flame1,flame2);
@@ -633,6 +654,7 @@ function animChibi(ch,st,dt,t){
     if(e.id==="play"){arms[0].rotation.x=-1.1;arms[1].rotation.x=-.8;arms[1].rotation.z=-.6+Math.sin(et*14)*.25;headG.rotation.z=Math.sin(et*3)*.12;eyeOpen=.3}
     if(e.id==="lie"){rig.rotation.x=-Math.PI/2+.15;rig.position.set(0,1.55,-.7);eyeOpen=.1;legs[0].rotation.x=legs[1].rotation.x=0;arms[0].rotation.x=arms[1].rotation.x=0;bounce=0;squash=1+Math.sin(t*1.5)*.02}
     if(e.id==="trade"){arms[1].rotation.x=-1.3;headG.rotation.x=.1}}
+  if(st.air){arms[0].rotation.z=-2.4;arms[1].rotation.z=2.4;legs[0].rotation.x=-.7;legs[1].rotation.x=.35;bounce=0;squash=1.05}
   rig.position.y+=bounce;const q=1/Math.sqrt(squash);rig.scale.set(q,squash,q);
   ch.blinkT-=dt;if(ch.blinkT<0)eyeOpen=.1;if(ch.blinkT<-.13)ch.blinkT=2+Math.random()*3;
   eyes.forEach((m,i)=>{m.scale.y=(i%2?1:1.2)*eyeOpen});
@@ -700,7 +722,7 @@ addEventListener("keydown",e=>{
   if(e.code==="KeyB")openDex();
   if(e.code==="Digit3")sendBottle();
   const ei=["Digit4","Digit5","Digit6","Digit7","Digit8"].indexOf(e.code);if(ei>=0&&emoteList()[ei])startEmote(emoteList()[ei].id);
-  if(e.code==="Space")startEmote("jump")});
+  if(e.code==="Space"&&!e.repeat)doJump()});
 addEventListener("keyup",e=>{keys[e.code]=false});
 addEventListener("blur",()=>{for(const k in keys)keys[k]=false});
 const cvs=renderer.domElement;let drag=null;
@@ -709,7 +731,8 @@ cvs.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;co
   yaw-=dx*.006;pitch=Math.max(-.45,Math.min(1.2,pitch+dy*.004))});
 cvs.addEventListener("pointerup",()=>drag=null);cvs.addEventListener("pointercancel",()=>drag=null);
 cvs.addEventListener("wheel",e=>{dist=Math.max(5,Math.min(26,dist+e.deltaY*.01));e.preventDefault()},{passive:false});
-if(touch){$("joy").hidden=false;$("runBtn").hidden=false}
+if(touch){$("joy").hidden=false;$("runBtn").hidden=false;$("jumpBtn").hidden=false}
+$("jumpBtn").addEventListener("pointerdown",e=>{e.preventDefault();doJump()});
 let running=false;
 {const rb=$("runBtn"),on=e=>{running=true;rb.classList.add("on");e.preventDefault()},off=()=>{running=false;rb.classList.remove("on")};
  rb.addEventListener("pointerdown",on);rb.addEventListener("pointerup",off);rb.addEventListener("pointercancel",off);rb.addEventListener("pointerleave",off)}
@@ -761,7 +784,7 @@ function startEmote(id){if(!started||busyS)return;if(fishS)stopFishing("");
   if(id==="wave"&&Math.hypot(C.x-player.position.x,C.z-player.position.z)<6){C.wait=2;setTimeout(()=>toast("꽃게 씨가 집게를 흔들어 줬다!"),600)}}
 function renderEmotes(){
   $("emotes").innerHTML=emoteList().map((e,i)=>`<button class="emo" data-emo="${e.id}"><span>${e.icon}</span><small>${e.name}${touch?"":` <kbd>${i+4}</kbd>`}</small></button>`).join("")+
-    `<button class="emo" data-emo="jump"><span>⭐</span><small>점프${touch?"":" <kbd>Space</kbd>"}</small></button><button class="emo" id="chatBtn"><span>💬</span><small>말하기${touch?"":" <kbd>Enter</kbd>"}</small></button>`;
+    `<button class="emo" id="chatBtn"><span>💬</span><small>말하기${touch?"":" <kbd>Enter</kbd>"}</small></button>`;
   $("emotes").querySelectorAll("[data-emo]").forEach(b=>b.onclick=()=>startEmote(b.dataset.emo));
   $("chatBtn").onclick=()=>openChat();
 }
@@ -799,24 +822,42 @@ function doAct(){
 function sendBottle(){if(busyS||!S.inv.bottle||!nearWater())return;
   busy(1.5,"편지 쓰는 중…",()=>{S.inv.bottle--;S.pend.push(Date.now()+rand(60,180)*1000);log("'여기 놀러 오세요'라고 써서 바다에 띄웠다.")})}
 
-/* fishing */
-const bobber=new THREE.Group();bobber.visible=false;scene.add(bobber);
-{const top=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8,0,Math.PI*2,0,Math.PI/2),SM(0xe8604c));const bot=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8,0,Math.PI*2,Math.PI/2,Math.PI/2),SM(0xffffff));bobber.add(top,bot)}
-const lineGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
-const fishLine=new THREE.Line(lineGeo,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.7}));fishLine.visible=false;fishLine.frustumCulled=false;scene.add(fishLine);
+/* fishing gear: a bobber flying out in an arc, then a sagging line; one for me and one per friend who fishes */
+const LINE_N=14,_tip=new THREE.Vector3();
+function makeGear(){
+  const b=new THREE.Group();
+  b.add(new THREE.Mesh(new THREE.SphereGeometry(.2,10,8,0,Math.PI*2,0,Math.PI/2),SM(0xe8604c)),new THREE.Mesh(new THREE.SphereGeometry(.2,10,8,0,Math.PI*2,Math.PI/2,Math.PI/2),SM(0xffffff)));
+  b.visible=false;scene.add(b);
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(new Float32Array(LINE_N*3),3));
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75}));l.visible=false;l.frustumCulled=false;scene.add(l);
+  return{b,l,cast:1,from:new THREE.Vector3(),to:new THREE.Vector3()}}
+function rodTip(ch){ch.rod.updateMatrixWorld(true);return _tip.set(0,2.4,0).applyMatrix4(ch.rod.matrixWorld)}
+function castGear(G,ch,bx,bz){G.from.copy(rodTip(ch));G.to.set(bx,0,bz);G.cast=0;G.b.visible=G.l.visible=true}
+function hideGear(G){G.b.visible=G.l.visible=false}
+function updGear(G,ch,t,dt,bite){
+  if(!G.b.visible)return;const tip=rodTip(ch),wy=waveY(G.to.x,G.to.z,t);
+  if(G.cast<1){G.cast=Math.min(1,G.cast+dt/.6);const k=G.cast;G.b.position.lerpVectors(G.from,G.to,k);G.b.position.y=G.from.y+(wy-G.from.y)*k+Math.sin(k*Math.PI)*4.5}
+  else G.b.position.set(G.to.x,wy+.05-(bite?.22+Math.sin(t*25)*.08:Math.sin(t*3)*.03),G.to.z);
+  const pa=G.l.geometry.attributes.position,dx=G.b.position.x-tip.x,dy=G.b.position.y+.12-tip.y,dz=G.b.position.z-tip.z,sag=Math.hypot(dx,dz)*.06*G.cast;
+  for(let i=0;i<LINE_N;i++){const k=i/(LINE_N-1);pa.setXYZ(i,tip.x+dx*k,tip.y+dy*k-sag*4*k*(1-k),tip.z+dz*k)}pa.needsUpdate=true}
+const myGear=makeGear();
 let fishS=null;
 const fishItem={act:()=>startFishing()};
+function groundBase(x,z){return onPier(x,z)?.6:Math.max(groundH(x,z),-.35)}
+let jumpY=0,jumpV=0,liftY=0;
+function doJump(){if(!started||busyS||jumpY>0||jumpV>0)return;if(fishS)stopFishing("");if(seat){seat=null;emo=null}
+  if(emo&&emo.id!=="sit")emo=null;jumpV=8.2;jumpY=.001;beep(520,.1,"triangle",.1);beep(780,.08,"triangle",.06,.06)}
 function startFishing(){
-  emo=null;const px=player.position.x,pz=player.position.z;
-  let dx,dz;if(onPier(px,pz)){dx=PU.x;dz=PU.z}else{const l=Math.hypot(px,pz)||1;dx=px/l;dz=pz/l}
-  let bx=px+dx*4.5,bz=pz+dz*4.5;
-  if(groundH(bx,bz)>-.15&&!onPier(px,pz)){bx=px+dx*7;bz=pz+dz*7}
+  emo=null;seat=null;const px=player.position.x,pz=player.position.z,pr=pierAt(px,pz);
+  let dx,dz;if(pr){dx=pr.u.x;dz=pr.u.z}else{const l=Math.hypot(px,pz)||1;dx=px/l;dz=pz/l}
+  let d=9;while(!pr&&d<17&&groundH(px+dx*d,pz+dz*d)>-.25)d+=2;   // throw well out past the shallows
+  const bx=px+dx*d,bz=pz+dz*d;
   player.rotation.y=Math.atan2(dx,dz);
   const fast=S.rod?.6:1;
-  fishS={phase:"wait",t:0,bite:(2+Math.random()*4.5)*fast,bx,bz};
-  bobber.position.set(bx,0,bz);bobber.visible=true;fishLine.visible=true;beep(300,.15,"sine",.1);
+  fishS={phase:"wait",t:0,bite:.6+(2+Math.random()*4.5)*fast,bx,bz};
+  castGear(myGear,me,bx,bz);beep(260,.25,"sine",.08);beep(520,.12,"sine",.05,.55);
 }
-function stopFishing(msg){fishS=null;bobber.visible=false;fishLine.visible=false;if(msg)log(msg)}
+function stopFishing(msg){fishS=null;hideGear(myGear);if(msg)log(msg)}
 function isNightNow(){const h=hourNow();return h>=19||h<5}
 function rollFish(){
   const night=isNightNow(),boost=(S.crab>=5?1.4:1)*(S.rod?1.8:1);
@@ -878,17 +919,19 @@ function upRemote(p){
   let r=remotes.get(p.peer);
   if(!r){const shirt=SHIRTS[Math.abs(num(pr.c,0,99)|0)%SHIRTS.length],hat=Math.abs(num(pr.h,0,99)|0)%HATS.length;
     const ch=makeChibi(shirt,hat);ch.g.position.set(pr.x,groundH(pr.x,pr.z),pr.z);
-    r={...ch,tag:makeTag(String(pr.n||"누군가").slice(0,12),false),hat,tx:pr.x,tz:pr.z,tr:0,speed:0,emo:null,et:0,st:0,a:"",fire:0};remotes.set(p.peer,r)}
+    r={...ch,tag:makeTag(String(pr.n||"누군가").slice(0,12),false),hat,tx:pr.x,tz:pr.z,tr:0,speed:0,emo:null,emoDur:0,et:0,st:0,a:"",fire:0,jy:0,tj:0,bx:NaN,bz:NaN,gear:null};remotes.set(p.peer,r)}
   r.tx=num(pr.x,r.tx,200);r.tz=num(pr.z,r.tz,200);r.tr=num(pr.r,0,10);r.a=String(pr.a||"").slice(0,8);
+  r.tj=num(pr.j,0,6);r.bx=Number.isFinite(pr.bx)?num(pr.bx,0,300):NaN;r.bz=Number.isFinite(pr.bz)?num(pr.bz,0,300):NaN;
   const nm=String(pr.n||"누군가").slice(0,12);if(r.tag.n.textContent!==nm)r.tag.n.textContent=nm;
   const hat=Math.abs(num(pr.h,0,99)|0)%HATS.length;if(hat!==r.hat){r.hat=hat;r.setHat(hat)}
-  if(pr.et!==r.et){r.et=pr.et;r.emo=pr.e?{id:String(pr.e).slice(0,8),t:0}:null;if(r.emo&&EMO_ICON[r.emo.id])showBubble(r.tag,EMO_ICON[r.emo.id],true)}
+  if(pr.et!==r.et||(pr.e||null)!==(r.emo?r.emo.id:null)){r.et=pr.et;const id=pr.e?String(pr.e).slice(0,8):null,def=EMOTES.find(x=>x.id===id);
+    r.emo=id?{id,t:0}:null;r.emoDur=id==="sit"||id==="lie"?1e9:def?def.dur:3;if(r.emo&&EMO_ICON[id])showBubble(r.tag,EMO_ICON[id],true)}
   if(pr.st!==r.st){const first=r.st===0&&Date.now()-num(pr.st,0,1e15)>8000;r.st=pr.st;
     if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
       if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
   r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);
 }
-function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);r.tag.el.remove();remotes.delete(peer)}
+function dropRemote(peer){const r=remotes.get(peer);if(!r)return;scene.remove(r.g);if(r.gear){scene.remove(r.gear.b);scene.remove(r.gear.l)}r.tag.el.remove();remotes.delete(peer)}
 function setWho(){const w=$("who");if(chan){w.classList.add("on");$("whoText").textContent=`${chanName} · ${remotes.size+1}/${CAP}명 ▾`}else{w.classList.remove("on");$("whoText").textContent="혼자 있는 섬"}}
 $("who").onclick=()=>openServers();
 /* public server: one WebSocket to our own server at /ws */
@@ -926,7 +969,9 @@ function openServers(){
 function sendPresence(){
   if(!chan||!online())return;
   const P={n:S.nick,c:S.shirt,h:S.hat,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
-    a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fireUntil};
+    a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fireUntil,
+    j:+liftY.toFixed(2)};
+  if(fishS){P.bx=+fishS.bx.toFixed(2);P.bz=+fishS.bz.toFixed(2)}
   const k=JSON.stringify(P);if(k===sentKey)return;sentKey=k;ws.send(JSON.stringify({t:"p",p:P}));
 }
 
@@ -958,12 +1003,11 @@ function update(dt,t){
   if(busyS){busyS.t+=dt;$("busyBar").style.width=Math.min(100,busyS.t/busyS.dur*100)+"%";
     if(busyS.t>=busyS.dur){const f=busyS.fn;busyS=null;$("busy").hidden=true;f();renderInv();save()}}
   /* fishing */
-  if(fishS){fishS.t+=dt;const wy=waveY(fishS.bx,fishS.bz,t);
+  if(fishS){fishS.t+=dt;
     if(fishS.phase==="wait"&&fishS.t>fishS.bite){fishS.phase="bite";fishS.t=0;beep(1200,.08,"square",.1);beep(1200,.08,"square",.1,.12);showBubble(meTag,"❗",true,.9)}
-    if(fishS.phase==="bite"&&fishS.t>(S.rod?1:.8)){stopFishing("놓쳤다! 입질 오면 바로 당겨야 해.")}
-    if(fishS){bobber.position.y=wy+.05-(fishS.phase==="bite"?.22+Math.sin(t*25)*.08:Math.sin(t*3)*.03);
-      const tip=new THREE.Vector3(0,2.4,0);me.rod.updateMatrixWorld();tip.applyMatrix4(me.rod.matrixWorld);
-      const pa=lineGeo.attributes.position;pa.setXYZ(0,tip.x,tip.y,tip.z);pa.setXYZ(1,bobber.position.x,bobber.position.y+.1,bobber.position.z);pa.needsUpdate=true}}
+    if(fishS.phase==="bite"&&fishS.t>(S.rod?1:.8)){stopFishing("놓쳤다! 입질 오면 바로 당겨야 해.")}}
+  /* jump: works while standing, walking or running */
+  if(jumpY>0||jumpV>0){jumpV-=24*dt;jumpY=Math.max(0,jumpY+jumpV*dt);if(jumpY===0)jumpV=0}
   /* movement */
   let mx=0,mz=0;
   if(playing&&!busyS&&!typing()){
@@ -974,7 +1018,7 @@ function update(dt,t){
   }
   const mag=Math.hypot(mx,mz),moving=mag>.05;let spd=0;
   if(moving){
-    if(fishS)stopFishing("");emo=null;
+    if(fishS)stopFishing("");emo=null;seat=null;
     const jm=Math.hypot(joyV.x,joyV.y);
     spd=jm>.05?(running?7.5:1.5+Math.min(1,jm)*2.8):(keys.ShiftLeft||keys.ShiftRight?10.5:6);const sp=spd*dt;
     let nx=player.position.x+mx*sp,nz=player.position.z+mz*sp;
@@ -983,19 +1027,25 @@ function update(dt,t){
     const target=Math.atan2(mx,mz);let diff=target-player.rotation.y;diff=Math.atan2(Math.sin(diff),Math.cos(diff));player.rotation.y+=diff*Math.min(1,dt*12);
   }
   if(emo){emo.t+=dt;if(emo.t>emo.dur)emo=null}
-  animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite"},dt,t);
-  const onP=onPier(player.position.x,player.position.z);
-  player.position.y=onP?.6:Math.max(groundH(player.position.x,player.position.z),-.35);
+  if(seat&&!(emo&&emo.id==="sit"))seat=null;
+  animChibi(me,{moving,speed:spd,emo,busy:!!busyS,fishing:!!fishS,bite:fishS&&fishS.phase==="bite",air:jumpY>.05},dt,t);
+  const baseY=groundBase(player.position.x,player.position.z);
+  player.position.y=(seat?seat.y:baseY)+jumpY;
+  liftY=player.position.y-baseY;
+  updGear(myGear,me,t,dt,fishS&&fishS.phase==="bite");
   S.px=player.position.x;S.pz=player.position.z;
-  /* remotes */
+  /* remotes: walk, jump, sit and fish just like they do on their own screen */
   remoteFire=0;
   remotes.forEach(r=>{const p=r.g.position,dx=r.tx-p.x,dz=r.tz-p.z,d=Math.hypot(dx,dz);
     const k=Math.min(1,dt*10);p.x+=dx*k;p.z+=dz*k;r.speed=r.speed*.8+(d/Math.max(dt,.001))*k*.2;
-    p.y=onPier(p.x,p.z)?.6:Math.max(groundH(p.x,p.z),-.35);
+    r.jy+=(r.tj-r.jy)*Math.min(1,dt*18);p.y=groundBase(p.x,p.z)+r.jy;
     let dr=r.tr-r.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));r.g.rotation.y+=dr*Math.min(1,dt*10);
-    if(r.emo){r.emo.t+=dt;if(r.emo.t>12&&r.emo.id!=="sit"&&r.emo.id!=="lie")r.emo=null}
-    const mv=r.speed>.6;if(mv&&r.emo)r.emo=null;
-    animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing:r.a==="fish"||r.a==="bite",bite:r.a==="bite"},dt,t);
+    if(r.emo){r.emo.t+=dt;if(r.emo.t>r.emoDur)r.emo=null}
+    const mv=r.speed>.8;if(mv&&r.emo&&r.emo.id!=="sit")r.emo=null;
+    const fishing=r.a==="fish"||r.a==="bite";
+    animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing,bite:r.a==="bite",air:r.tj>.4&&!(r.emo&&r.emo.id==="sit")},dt,t);
+    if(fishing&&Number.isFinite(r.bx)){if(!r.gear)r.gear=makeGear();if(!r.gear.b.visible||r.gear.to.x!==r.bx||r.gear.to.z!==r.bz)castGear(r.gear,r,r.bx,r.bz);updGear(r.gear,r,t,dt,r.a==="bite")}
+    else if(r.gear)hideGear(r.gear);
     if(r.fire>remoteFire)remoteFire=r.fire});
   /* camera */
   const tgt=new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z);
