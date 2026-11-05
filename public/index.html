@@ -101,7 +101,7 @@ body.touch .emo span{font-size:1.2rem}
 body.touch .emo small{display:none}
 body.touch #prompt{left:calc(50vw + 20px);bottom:calc(var(--sb) + 40px);font-size:1rem;padding:5px 12px;white-space:normal;text-align:center;max-width:calc(100vw - 260px);line-height:1.2}
 body.touch #prompt kbd{display:none}
-body.touch #chatForm{top:calc(var(--st) + 64px);bottom:auto;width:min(300px,calc(100% - 150px));padding:3px;gap:4px;left:calc(50% - 10px)}
+body.touch #chatForm{top:calc(var(--st) + 130px);bottom:auto;width:min(340px,calc(100% - 24px));padding:3px;gap:4px;left:50%}
 body.touch #chatIn{font-size:16px;padding:3px 8px}
 body.touch #chatForm .btn{font-size:.9rem!important;padding:1px 8px!important;box-shadow:2px 2px 0 var(--ink)}
 body.touch #toast{top:calc(var(--st) + 62px);font-size:1.1rem}
@@ -866,8 +866,13 @@ function openCostume(){
 
 /* chat */
 let say={s:"",st:0};
-function openChat(){$("chatForm").hidden=false;$("prompt").hidden=true;$("chatIn").focus()}
-function closeChat(){$("chatIn").value="";$("chatIn").blur();$("chatForm").hidden=true}
+function openChat(){$("chatForm").hidden=false;$("prompt").hidden=true;$("chatIn").focus();[60,300,600].forEach(ms=>setTimeout(placeChat,ms))}
+function closeChat(){$("chatIn").value="";$("chatIn").blur();$("chatForm").hidden=true;$("chatForm").style.top=""}
+// on phones, sit the chat box right on top of the on-screen keyboard
+function placeChat(){const f=$("chatForm"),vv=window.visualViewport;if(f.hidden||!touch||!vv)return;
+  const keyboardUp=vv.height<innerHeight*.85;if(!keyboardUp){f.style.top="";return}
+  f.style.top=Math.max(8,vv.offsetTop+vv.height-f.offsetHeight-8)+"px"}
+if(window.visualViewport){visualViewport.addEventListener("resize",placeChat);visualViewport.addEventListener("scroll",placeChat)}
 $("chatForm").addEventListener("submit",e=>{e.preventDefault();const t=$("chatIn").value.replace(/\s+/g," ").trim().slice(0,40);
   if(t){say={s:t,st:Date.now()};showBubble(meTag,t,false);meTag.bub.style.opacity="1";speak(t,0,S.nick)}closeChat()});
 /* characters speak their chat out loud; quieter with distance, silent past HEAR */
@@ -1061,7 +1066,7 @@ function upRemote(p){
   const look={shirt:Math.abs(num(pr.c,0,99)|0)%OUTFITS.length,hat:Math.abs(num(pr.h,0,99)|0)%HATS.length,hair:Math.abs(num(pr.hr,0,99)|0)%HAIRS.length,beard:Math.abs(num(pr.bd,0,99)|0)&7};
   const lk=JSON.stringify(look);if(lk!==r.look){r.look=lk;r.hat=look.hat;r.setLook(look)}
   if(pr.et!==r.et||(pr.e||null)!==(r.emo?r.emo.id:null)){r.et=pr.et;const id=pr.e?String(pr.e).slice(0,8):null,def=EMOTES.find(x=>x.id===id);
-    r.emo=id?{id,t:0}:null;r.emoDur=id==="sit"||id==="lie"?1e9:def?def.dur:3;if(r.emo&&EMO_ICON[id])showBubble(r.tag,EMO_ICON[id],true)}
+    r.emo=id?{id,t:0,fired:r.firedEt===pr.et&&id===r.firedId?1:0}:null;if(r.emo&&(id==="web"||id==="rock")){r.firedEt=pr.et;r.firedId=id}r.emoDur=id==="sit"||id==="lie"?1e9:def?def.dur:3;if(r.emo&&EMO_ICON[id])showBubble(r.tag,EMO_ICON[id],true)}
   if(pr.st!==r.st){const first=r.st===0&&Date.now()-num(pr.st,0,1e15)>8000;r.st=pr.st;
     if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
       if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
@@ -1177,7 +1182,8 @@ function update(dt,t){
     r.jy+=(r.tj-r.jy)*Math.min(1,dt*18);p.y=groundBase(p.x,p.z)+r.jy;
     let dr=r.tr-r.g.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));r.g.rotation.y+=dr*Math.min(1,dt*10);
     if(r.emo){r.emo.t+=dt;maybeFire(r.emo,r);if(r.emo.t>r.emoDur)r.emo=null}
-    const mv=r.speed>.8;if(mv&&r.emo&&r.emo.id!=="sit")r.emo=null;
+    // the sender clears its own emote when it walks; here we only follow what it says (catching up must not cancel a throw)
+    const mv=r.speed>.8&&!(r.emo&&r.emo.id!=="sit");
     const fishing=r.a==="fish"||r.a==="bite";
     animChibi(r,{moving:mv,speed:Math.min(r.speed,11),emo:r.emo,busy:r.a==="busy",fishing,bite:r.a==="bite",air:r.tj>.4&&!(r.emo&&r.emo.id==="sit")},dt,t);
     if(fishing&&Number.isFinite(r.bx)){if(!r.gear)r.gear=makeGear();if(!r.gear.b.visible||r.gear.to.x!==r.bx||r.gear.to.z!==r.bz)castGear(r.gear,r,r.bx,r.bz);updGear(r.gear,r,t,dt,r.a==="bite")}
