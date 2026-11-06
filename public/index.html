@@ -33,7 +33,8 @@
 [hidden]{display:none!important}
 html,body{height:100%;margin:0;overflow:hidden;background:#8fd3ef;color:var(--ink)}
 body{font-family:var(--body);font-size:14px;-webkit-user-select:none;user-select:none}
-#game{position:fixed;inset:0}
+/* fill the whole phone screen, also when opened from the home screen (iPhone reports a short viewport there) */
+#game{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100lvh}
 #game canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 .panel{background:var(--panel);border:2px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 rgba(43,42,38,.35)}
 #hud{position:fixed;top:var(--st);left:var(--sl);padding:5px 8px;max-width:min(210px,52vw);display:flex;flex-direction:column;gap:3px}
@@ -444,8 +445,11 @@ const scene=new THREE.Scene();
 const skyCol=new THREE.Color(0x8fd3ef);
 scene.background=skyCol;scene.fog=new THREE.Fog(skyCol,160,720);
 const camera=new THREE.PerspectiveCamera(55,1,.1,2600);
-function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
-addEventListener("resize",resize);resize();
+function resize(){const r=$("game").getBoundingClientRect(),w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(Math.max(r.height,innerHeight)));
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener("resize",resize);addEventListener("orientationchange",()=>setTimeout(resize,300));
+if(window.visualViewport)visualViewport.addEventListener("resize",resize);
+resize();[300,1000,2500].forEach(ms=>setTimeout(resize,ms)); // iPhone home-screen apps settle their size a moment after launch
 
 const hemi=new THREE.HemisphereLight(0xfff6e0,0xc9b07a,.6);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff1d0,1);sun.castShadow=true;
@@ -1452,7 +1456,7 @@ let started=false;
    $("title").hidden=true;started=true;startAudio();save();initRoom()}}
 
 /* ---------- loop ---------- */
-let W_NOW={w:0,cloud:0,rain:0};const nightShow={aurora:-1,meteor:-1};
+let pageBg="";let W_NOW={w:0,cloud:0,rain:0};const nightShow={aurora:-1,meteor:-1};
 // game clock: real time flows unevenly so sunsets linger (x0.7) and nights pass faster (x1.45)
 const TIME_SEGS=[[6,17,1],[17,19.6,.7],[19.6,29,1.45],[29,30,1]];
 const TIME_U=TIME_SEGS.reduce((a,[h0,h1,r])=>a+(h1-h0)/r,0);
@@ -1538,6 +1542,7 @@ function update(dt,t){
   skyU.sunCol.value.setHex(elev<.15?0xff9a55:0xffe2b0);
   skyDome.position.copy(camera.position);skyGroup.position.copy(camera.position);
   skyCol.copy(skyU.hor.value);scene.fog.color.copy(skyCol);
+  { const bg="#"+skyU.top.value.getHexString(); if(bg!==pageBg){pageBg=bg;document.documentElement.style.background=bg;document.body.style.background=bg;const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.content=bg} } // any edge the canvas misses matches the sky
   scene.fog.far=720-rn*300;scene.fog.near=160-rn*80;
   const night=Math.max(0,Math.min(1,-elev*4));
   sun.position.set(player.position.x+sd.x*80,Math.max(8,sd.y*80),player.position.z+sd.z*80);sun.target.position.copy(player.position);
