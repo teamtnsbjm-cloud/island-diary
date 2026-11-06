@@ -661,7 +661,7 @@ CAMPS.forEach((C0,i)=>{
   for(let k=0;k<3;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,1.1,5),woodMat);l.rotation.z=Math.PI/2;l.rotation.y=k*1.05;l.position.y=.12;g.add(l)}
   C0.f1=new THREE.Mesh(new THREE.ConeGeometry(.42,1.2,6),new THREE.MeshBasicMaterial({color:0xf08a2c}));C0.f1.position.y=.7;
   C0.f2=new THREE.Mesh(new THREE.ConeGeometry(.24,.8,6),new THREE.MeshBasicMaterial({color:0xffd25a}));C0.f2.position.y=.55;g.add(C0.f1,C0.f2);
-  C0.light=new THREE.PointLight(0xff8a3a,0,16,1.6);C0.light.position.y=1.3;g.add(C0.light);
+  C0.light=new THREE.PointLight(0xffb070,0,14,1.8);C0.light.position.y=1.3;g.add(C0.light);
   C0.smoke=[];for(let k=0;k<4;k++){const s=new THREE.Mesh(new THREE.IcosahedronGeometry(.3,0),new THREE.MeshLambertMaterial({color:0xbfbfbf,transparent:true,opacity:.5}));g.add(s);C0.smoke.push(s)}
   colliders.push({x:C0.x,z:C0.z,r:.9});
   items.push({x:C0.x,z:C0.z,r:3,label:()=>{
@@ -823,6 +823,8 @@ items.push(crabItem);
 function makeChibi(shirtHex,hatIdx,captain){
   const g=new THREE.Group(),rig=new THREE.Group();g.add(rig);
   const skin=SM(captain?0xc9a27e:0xffdcc0),shirt=SM(shirtHex),sleeve=SM(shirtHex),stripe=SM(0xfff4e6),pants=SM(captain?0x1f3a5f:0x7ec3e6),hatM=SM(HATS[hatIdx].c),ribM=SM(HATS[hatIdx].r);
+  // a faint glow of their own so faces and clothes never sink into shadow at night or by a fire
+  const selfLit=m=>m.emissive.copy(m.color).multiplyScalar(.22);skin.emissive.setHex(0x4a3628);[shirt,sleeve,pants,hatM].forEach(selfLit);
   const ink=new THREE.MeshBasicMaterial({color:0x2b2a26}),shine=new THREE.MeshBasicMaterial({color:0xffffff}),blush=new THREE.MeshBasicMaterial({color:0xff8fa3,transparent:true,opacity:.65});
   const body=sh(new THREE.Mesh(new THREE.SphereGeometry(.4,18,14),shirt));body.scale.set(1,1.08,.92);body.position.y=.78;rig.add(body);
   const band=new THREE.Mesh(new THREE.TorusGeometry(.385,.045,8,24),stripe);band.rotation.x=Math.PI/2;band.position.y=.82;band.scale.set(1,.92,1);rig.add(band);
@@ -922,9 +924,9 @@ function makeChibi(shirtHex,hatIdx,captain){
     const masked=fitKind==="spider";[...ears,...face].forEach(e=>e.visible=!masked);hairG.visible=beardG.visible=!masked}
   let hatOn=true;
   return{g,rig,headG,eyes,legs,arms,rod,gun,hatM,ribM,walkPh:0,blinkT:1+Math.random()*3,
-    setHat(i){const H=HATS[i]||HATS[0];hat.visible=!H.none;hatOn=!H.none;if(!H.none){hatM.color.setHex(H.c);ribM.color.setHex(H.r)}if(tiara)tiara.visible=!hatOn},
+    setHat(i){const H=HATS[i]||HATS[0];hat.visible=!H.none;hatOn=!H.none;if(!H.none){hatM.color.setHex(H.c);ribM.color.setHex(H.r);selfLit(hatM)}if(tiara)tiara.visible=!hatOn},
     setShirt(hex){shirt.color.setHex(hex);sleeve.color.setHex(hex)},setHair:buildHair,setBeard:buildBeard,
-    setOutfit(i){const o=OUTFITS[i]||OUTFITS[0];shirt.color.setHex(o.body);sleeve.color.copy(o.sleeve==="skin"?skin.color:new THREE.Color(o.sleeve));
+    setOutfit(i){const o=OUTFITS[i]||OUTFITS[0];shirt.color.setHex(o.body);sleeve.color.copy(o.sleeve==="skin"?skin.color:new THREE.Color(o.sleeve));setTimeout(()=>[shirt,sleeve,pants].forEach(selfLit));
       pants.color.copy(o.pants==="skin"?skin.color:new THREE.Color(o.pants));band.visible=!!o.band;if(o.band)band.material=SM(o.band);buildFit(o);if(tiara)tiara.visible=!hatOn},
     setLook(L){this.setHat(L.hat|0);buildHair(L.hair|0);this.setOutfit(L.shirt|0);buildBeard(L.beard|0);if(fitKind==="spider")hairG.visible=beardG.visible=false},
     setRod(gold){rod.userData.pole.material.color.setHex(gold?0xf2c14e:0x8a6a3e)}};
@@ -1555,7 +1557,7 @@ function update(dt,t){
   for(const p of palms){p.crown.rotation.z=Math.sin(t*1.1+p.ph)*.05;p.crown.rotation.x=Math.cos(t*.9+p.ph)*.04;p.cocos.forEach((c,i)=>c.visible=p.cd<=0||i===0&&p.cd<10)}
   /* fire */
   CAMPS.forEach((C0,ci)=>{const lit=fireLit(ci);C0.f1.visible=C0.f2.visible=lit;C0.smoke.forEach(s=>s.visible=lit);
-    if(lit){const fl=1+Math.sin(t*17+ci)*.12;C0.f1.scale.set(fl,1+Math.sin(t*13+ci)*.15,fl);C0.f2.scale.set(fl,1+Math.cos(t*15+ci)*.2,fl);C0.light.intensity=1.6+Math.sin(t*20+ci)*.3+night*1.5;
+    if(lit){const fl=1+Math.sin(t*17+ci)*.12;C0.f1.scale.set(fl,1+Math.sin(t*13+ci)*.15,fl);C0.f2.scale.set(fl,1+Math.cos(t*15+ci)*.2,fl);C0.light.intensity=.75+Math.sin(t*20+ci)*.12+night*.55;
       C0.smoke.forEach((s,i)=>{const k=((t*.35+i/4)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
     else C0.light.intensity=0});
   animDecor(t,night);updFires(t,night);
