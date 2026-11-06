@@ -12,7 +12,7 @@ const MAX_ISLANDS = Number(process.env.MAX_ISLANDS) || 20; // 섬(채널) 개수
 const PUB = path.join(__dirname, "public");
 const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
-  ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".json": "application/json",
+  ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".json": "application/json", ".webmanifest": "application/manifest+json",
   ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".woff2": "font/woff2",
 };
 
@@ -35,7 +35,7 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(file);
     res.writeHead(200, {
       "Content-Type": TYPES[ext] || "application/octet-stream",
-      "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=86400",
+      "Cache-Control": ext === ".html" || ext === ".webmanifest" || p === "/sw.js" ? "no-cache" : "public, max-age=86400", // 앱 설정과 서비스 워커는 항상 새로 확인
       "X-Content-Type-Options": "nosniff",
     });
     res.end(data);

@@ -1,0 +1,17 @@
+{
+  "name": "무인도 일기",
+  "short_name": "무인도 일기",
+  "description": "친구들과 같은 섬에서 낚시하고, 석양과 오로라를 보며 노는 온라인 무인도",
+  "lang": "ko",
+  "start_url": "/?source=homescreen",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#8fd3ef",
+  "theme_color": "#1f7f8c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

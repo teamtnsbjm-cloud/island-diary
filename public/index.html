@@ -7,7 +7,16 @@
 <meta name="description" content="친구들과 같은 섬에서 낚시하고 물물교환하며 노는 3D 무인도">
 <meta property="og:title" content="무인도 일기">
 <meta property="og:description" content="할 일 없는 섬. 낚시하고, 멍때리고, 같이 놀자.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1f7f8c">
+<!-- iPhone: 홈 화면에 추가하면 앱처럼 전체 화면으로 열려요 -->
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="무인도 일기">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:image" content="/icons/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap">
 <style>
@@ -208,6 +217,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
     <label class="field">섬에서 쓸 이름<input id="nickIn" maxlength="12"></label>
     <div class="keys" id="keys"></div>
     <div class="row"><button class="btn main" id="go">섬으로 가기</button></div>
+    <div class="row" id="installRow" hidden><button class="btn" id="installBtn" style="font-size:1rem">📲 홈 화면에 추가</button></div>
+    <p id="iosHint" hidden style="font-size:.85rem;color:var(--ink-soft)">아이폰은 Safari 아래쪽 <b>공유 버튼(□↑)</b> → <b>홈 화면에 추가</b>를 누르면 앱처럼 쓸 수 있어요.</p>
   </div>
 </div>
 <div id="dex" class="overlay" hidden></div>
@@ -1428,6 +1439,14 @@ let started=false;
   :[["WASD / 방향키","걷기 (Shift 달리기)"],["Space","점프"],["마우스 드래그","시점 돌리기 · 휠로 줌"],["E","줍기·낚시·앉기·교환 (입질 오면 E!)"],["Enter","말하기"],["4~9","감정표현 · 특별 기술"],["B","물고기 도감"],["📖 · 🎒 · ✏️","규칙서 · 가방 · 이름 바꾸기"]];
  $("keys").innerHTML=k.map(([a,b])=>`<b>${a}</b><span>${b}</span>`).join("");
  $("nickIn").value=S.nick;
+ /* 홈 화면에 추가: 안드로이드는 설치 창을 바로 띄우고, 아이폰은 방법을 알려줘요. 이미 앱으로 열었으면 숨겨요. */
+ {const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;let deferred=null;
+  if(!standalone){
+    if(ios){$("installRow").hidden=false;$("installBtn").onclick=()=>{$("iosHint").hidden=false}}
+    addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;$("installRow").hidden=false;
+      $("installBtn").onclick=async()=>{deferred.prompt();const r=await deferred.userChoice;deferred=null;if(r.outcome==="accepted")$("installRow").hidden=true}})}
+  if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("/sw.js").catch(()=>{})}
  $("go").onclick=()=>{const n=$("nickIn").value.replace(/\s+/g," ").trim().slice(0,12);if(n){S.nick=n;meTag.n.textContent=n}
    if(canSpeak){try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;speechSynthesis.speak(u)}catch(e){}} // unlock voice on phones
    $("title").hidden=true;started=true;startAudio();save();initRoom()}}
