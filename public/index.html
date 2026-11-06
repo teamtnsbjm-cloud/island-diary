@@ -204,7 +204,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-of
 <div id="title" class="overlay">
   <div class="card">
     <h2>무인도 일기</h2>
-    <p>할 일은 없다. 원시인 옷 한 벌로 시작해서 나뭇가지와 조개를 줍고, 모닥불 앞에서 멍때리면 된다. 모은 재료를 교환소에서 낚싯대와 새 옷으로 바꾸고, 연못과 바다에서 물고기를 낚는다. 가끔 들르는 상선 '갈매기호'에서는 모자와 꾸미기를 바꿀 수 있다. 친구가 들어오면 같은 섬에서 만난다.</p>
+    <p>할 일은 없다. 옷과 머리 모양을 골라 입고 나뭇가지와 조개를 줍고, 모닥불 앞에서 멍때리면 된다. 모은 재료를 교환소에서 낚싯대와 특별한 옷으로 바꾸고, 연못과 바다에서 물고기를 낚는다. 가끔 들르는 상선 '갈매기호'에서는 모자와 꾸미기를 바꿀 수 있다. 친구가 들어오면 같은 섬에서 만난다.</p>
     <label class="field">섬에서 쓸 이름<input id="nickIn" maxlength="12"></label>
     <div class="keys" id="keys"></div>
     <div class="row"><button class="btn main" id="go">섬으로 가기</button></div>
@@ -297,19 +297,8 @@ const DEFAULT_OUTFIT=5; // everyone starts as a caveman
 /* island exchange: always open, trades what you gather for unlocks (kept easy for now) */
 const EXCHANGE=[
   {key:"rod",n:"낚싯대",ic:"🎣",give:{wood:5,shell:3},d:"이게 있어야 낚시할 수 있어요"},
-  {key:"o0",n:"빨간 티",ic:"👕",give:{leaf:3}},
-  {key:"o1",n:"흰 나시",ic:"🎽",give:{coconut:2}},
-  {key:"o3",n:"축구복",ic:"⚽",give:{wood:4,leaf:2}},
-  {key:"o2",n:"공주님",ic:"👗",give:{shell:3,coconut:2}},
   {key:"o4",n:"거미 히어로",ic:"🕷️",give:{anchovy:2,leaf:3},d:"🕸️ 거미줄 기술"},
-  {key:"o6",n:"양복",ic:"🤵",give:{mackerel:1,shell:3},d:"🔫 비비탄총 기술"},
-  {key:"h1",n:"앞머리",ic:"💇",give:{leaf:2}},
-  {key:"h2",n:"양갈래",ic:"💇",give:{coconut:2}},
-  {key:"h3",n:"삐죽머리",ic:"💇",give:{wood:2}},
-  {key:"h4",n:"뽀글머리",ic:"💇",give:{shell:2}},
-  {key:"b0",n:"콧수염",ic:"🥸",give:{coconut:1}},
-  {key:"b1",n:"턱수염",ic:"🧔",give:{leaf:2}},
-  {key:"b2",n:"염소수염",ic:"🐐",give:{wood:2}}];
+  {key:"o6",n:"양복",ic:"🤵",give:{mackerel:1,shell:3},d:"🔫 비비탄총 기술"}];
 const HAIRS=["기본","앞머리","양갈래","삐죽머리","뽀글머리"];
 const BEARDS=["콧수염","턱수염","염소수염"]; // bit 1, 2, 4
 const POOL=[
@@ -352,8 +341,10 @@ if(S.px==null)startSpot();
 for(const h of FREE_HATS)if(!S.hats.includes(h))S.hats.push(h);
 // everything starts locked except the caveman outfit; unlocks come from the island exchange
 if(!S.lock2){S.unlock={o:[DEFAULT_OUTFIT],h:[0],b:0,rod:!!S.rod};S.shirt=DEFAULT_OUTFIT;S.hair=0;S.beard=0;S.bm=1;S.lock2=1}
+// free from the start: every outfit except the spider hero and the suit, all hairstyles, all beards
+const FREE_OUTFITS=[0,1,2,3,5];
 function unlocked(key){const U=S.unlock;if(key==="rod")return !!U.rod;const n=+key.slice(1);
-  return key[0]==="o"?U.o.includes(n):key[0]==="h"?U.h.includes(n):!!(U.b&(1<<n))}
+  return key[0]==="o"?(FREE_OUTFITS.includes(n)||U.o.includes(n)):key[0]==="h"?true:key[0]==="b"?true:false}
 S.hair=S.hair|0;if(!S.bm){S.beard=[0,1,2,4][S.beard|0]||0;S.bm=1}S.beard&=7;if(!(S.shirt>=0&&S.shirt<OUTFITS.length))S.shirt=0;
 function have(id){return (id in S.inv?S.inv[id]:S.fish[id])||0}
 function addItem(id,n){if(id in RES_N)S.inv[id]=(S.inv[id]||0)+n;else S.fish[id]=(S.fish[id]||0)+n}
@@ -1104,7 +1095,7 @@ function openGuide(stay){
     <li>🔥 정해진 모닥불 자리는 나무 3개로 피워요. 왼쪽 메뉴의 🔥 버튼을 누르면 나무 3개 + 조개 1개로 <b>아무 데서나</b> 불을 피울 수 있어요. 불 옆에서 생선을 구워 먹어요.</li>
     <li>🛖 연못 동쪽의 <b>움집</b>은 누구나 드나들 수 있어요. 문 앞 큰 캠프파이어는 꺼지지 않아요.</li>
     <li>🌇 석양은 천천히 지고, 밤은 낮보다 빨리 지나가요.</li>
-    <li>👕 처음엔 <b>원시인</b> 옷뿐이에요. 다른 옷·헤어·수염은 🔁 교환소에서 열어요. 원시인 🪨 거미 히어로 🕸️ 양복 🔫 은 특별 기술이 있어요.</li>
+    <li>👕 가방 → 코스튬에서 옷·헤어·수염을 마음대로 골라요. 🕷️ 거미 히어로와 🤵 양복만 🔁 교환소에서 열어요. 모자는 밀짚모자만 있고 나머지는 갈매기호 선장과 바꿔요. 원시인 🪨 거미 히어로 🕸️ 양복 🔫 은 특별 기술이 있어요.</li>
     <li>⛵ <b>갈매기호</b>는 가끔 와요. 선착장에서 선장과 물물교환하면 모자·해먹 같은 꾸미기가 생겨요.</li>
     <li>📦 꾸미기는 가방 → 인벤토리에서 설치하고 수거해요. 내가 놓은 물건은 모두에게 보여요.</li>
     <li>🌅 날씨는 계속 바뀌어요. 저녁엔 석양, 밤엔 별똥별과 오로라를 기다려 봐요.</li></ul>`;
@@ -1146,7 +1137,7 @@ function openCostume(){
     ${row("헤어",HAIRS.map((n,i)=>({html:unlocked("h"+i)?n:`🔒 ${n}`,lock:!unlocked("h"+i)})),S.hair,"hair")}
     <div class="cRow"><b>수염 <small style="font-family:var(--body);font-weight:400;font-size:.72rem;color:var(--ink-soft)">여러 개 같이 · 다시 누르면 빼기</small></b><div class="cOpts">
       ${BEARDS.map((n,i)=>unlocked("b"+i)?`<button class="cOpt ${S.beard&(1<<i)?"on":""}" data-beard="${1<<i}">${n}</button>`:`<button class="cOpt" disabled>🔒 ${n}</button>`).join("")}</div></div>
-    <p style="font-size:.76rem;color:var(--ink-soft);margin:0">🔒 옷·헤어·수염은 📖 규칙서의 교환소에서, 모자는 갈매기호에서 열어요 · 🦴 원시인 🕷️ 거미 히어로 🤵 양복은 특별 기술이 있어요</p></div>`;
+    <p style="font-size:.76rem;color:var(--ink-soft);margin:0">🔒 거미 히어로·양복은 📖 교환소에서, 모자는 갈매기호 선장에게서 열어요 · 🦴 원시인 🕷️ 거미 히어로 🤵 양복은 특별 기술이 있어요</p></div>`;
   el.hidden=false;
   $("cClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
   el.querySelectorAll(".cOpt[data-k]").forEach(b=>b.onclick=()=>{S[b.dataset.k]=+b.dataset.i;me.setLook(S);save();renderEmotes();openCostume()});
@@ -1340,7 +1331,7 @@ function openTrade(){
     ${offers.length?offers.map(i=>{const o=POOL[i],ok=Object.entries(o.give).every(([id,n])=>have(id)>=n),was=done.includes(i);
       return`<div class="offer"><b>${o.n}</b><span class="give">내는 것: ${giveTxt(o.give)}</span><small>${o.d}</small><button class="btn ${ok&&!was?"main":""}" data-tr="${i}" ${ok&&!was?"":"disabled"}>${was?"교환함":"교환"}</button></div>`}).join("")
       :`<p>"오늘은 더 줄 게 없네. 다음에 또 올게!"</p>`}
-    <p style="font-size:.8rem;color:var(--ink-soft)">낚싯대와 옷·헤어·수염은 📖 규칙서 → 교환소에서 언제든 바꿀 수 있어요.</p></div>`;
+    <p style="font-size:.8rem;color:var(--ink-soft)">낚싯대와 거미 히어로·양복은 📖 규칙서 → 교환소에서 언제든 바꿀 수 있어요.</p></div>`;
   el.hidden=false;$("trClose").onclick=()=>el.hidden=true;el.onclick=e=>{if(e.target===el)el.hidden=true};
   el.querySelectorAll("[data-tr]").forEach(b=>b.onclick=()=>doTrade(+b.dataset.tr,sn.d));
 }
