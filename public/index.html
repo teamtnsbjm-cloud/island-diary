@@ -456,8 +456,10 @@ const skyDome=new THREE.Mesh(new THREE.SphereGeometry(2000,32,18),new THREE.Shad
   fragmentShader:"uniform vec3 top,hor,sunCol,sunDir;uniform float glow;varying vec3 vD;void main(){vec3 d=normalize(vD);float h=clamp(d.y,0.,1.);vec3 c=mix(hor,top,pow(h,.5));float s=max(dot(d,normalize(sunDir)),0.);c+=sunCol*(pow(s,6.)*.45*glow+pow(s,90.)*.8*glow+pow(s,12.)*.15);if(d.y<0.)c=hor;gl_FragColor=vec4(c,1.);}"}));
 skyDome.renderOrder=-10;scene.add(skyDome);
 const SKY_STOPS=[ // sun elevation → zenith, horizon, sun glow
-  [-1, 0x050a1a,0x0d1730,0],[-.32,0x070f26,0x152443,0],[-.18,0x1a1e4c,0x35306a,.3],[-.08,0x2f3680,0xb4567c,.9],
-  [0,0x4656aa,0xff7e58,1],[.1,0x5a86cc,0xffa565,1],[.22,0x5fa6e0,0xffd6a6,.6],[.4,0x4aa8e8,0xbfe8f5,.2],[1,0x3d9be6,0xc7ecf7,.1]];
+  // night → violet dusk → rose → coral → amber → gold → day: more steps so the afterglow lasts
+  [-1, 0x050a1a,0x0d1730,0],[-.32,0x070f26,0x152443,0],[-.2,0x171a4a,0x2e2766,.25],[-.12,0x262a72,0x6a3f86,.6],
+  [-.06,0x34358a,0xc75687,.95],[-.01,0x4747a0,0xff6a6a,1],[.04,0x5260b2,0xff8357,1],[.1,0x5a82c8,0xffa14f,1],
+  [.17,0x5e9ad8,0xffbf6e,.85],[.26,0x5fa6e0,0xffdcaa,.5],[.42,0x4aa8e8,0xbfe8f5,.2],[1,0x3d9be6,0xc7ecf7,.1]];
 const _c1=new THREE.Color(),_c2=new THREE.Color();
 function skyAt(e,outTop,outHor){for(let i=1;i<SKY_STOPS.length;i++){const a=SKY_STOPS[i-1],b=SKY_STOPS[i];if(e<=b[0]||i===SKY_STOPS.length-1){const k=Math.max(0,Math.min(1,(e-a[0])/(b[0]-a[0])));
   outTop.setHex(a[1]).lerp(_c1.setHex(b[1]),k);outHor.setHex(a[2]).lerp(_c2.setHex(b[2]),k);return a[3]+(b[3]-a[3])*k}}return 0}
@@ -533,11 +535,12 @@ function waves(t){const p=wGeo.attributes.position;
 let seed=7;const srnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646};
 const items=[],colliders=[];
 const CAMP={x:3,z:8},HUT={x:-7,z:3};
+const BIGHUT={x:-3,z:-17,r:5.4}; // big pit house by the pond, door facing east (+x)
 /* piers: the first is where the trading ship docks, the others are just for fishing */
 const PIER_W=1.4;
-const PIERS=[{a:-.5,len:14},{a:1.85,len:13},{a:2.75,len:13}].map(p=>({...p,u:{x:Math.cos(p.a),z:Math.sin(p.a)},s0:rAt(p.a,.35)-3}));
+const PIERS=[{a:-.5,len:17,w:2.4,stone:true},{a:1.85,len:13},{a:2.75,len:13}].map(p=>({...p,u:{x:Math.cos(p.a),z:Math.sin(p.a)},s0:rAt(p.a,.35)-3}));
 const PIER_A=PIERS[0].a,PIER_S0=PIERS[0].s0,PIER_LEN=PIERS[0].len,PU=PIERS[0].u;
-function pierAt(x,z){for(const p of PIERS){const s=x*p.u.x+z*p.u.z,w=Math.abs(-x*p.u.z+z*p.u.x);if(s>p.s0&&s<p.s0+p.len&&w<PIER_W)return p}return null}
+function pierAt(x,z){for(const p of PIERS){const s=x*p.u.x+z*p.u.z,w=Math.abs(-x*p.u.z+z*p.u.x);if(s>p.s0&&s<p.s0+p.len&&w<(p.w||PIER_W))return p}return null}
 function onPier(x,z){return !!pierAt(x,z)}
 const PIER_END={x:PU.x*(PIER_S0+PIER_LEN-1.5),z:PU.z*(PIER_S0+PIER_LEN-1.5)};
 // camp fires around the island (index 0 is the original one in the middle)
@@ -548,13 +551,26 @@ const CAMPS=[{x:CAMP.x,z:CAMP.z,seats:4},
   {x:25.4,z:-40.3,seats:0},          // hill lookout, beside its two benches
   {x:-44,z:8,seats:3},               // small west hill
   {x:6,z:beachZ+2.8,seats:0},        // spawn beach, in front of its benches
-  {x:POND.x+3,z:POND.z+POND.r+4.5,seats:3}]; // pond side
-const taken=[[HUT.x,HUT.z,8],[0,rAt(Math.PI/2,1.1),3],[POND.x,POND.z,POND.r+3],...CAMPS.map(c=>[c.x,c.z,5]),...PIERS.map(p=>[p.u.x*(p.s0-2),p.u.z*(p.s0-2),7])];
+  {x:POND.x+3,z:POND.z+POND.r+4.5,seats:3},  // pond side
+  {x:BIGHUT.x+BIGHUT.r+10,z:BIGHUT.z+1,seats:5,always:true}]; // big campfire at the pit house door, never goes out
+const taken=[[HUT.x,HUT.z,8],[BIGHUT.x,BIGHUT.z,BIGHUT.r+3],[0,rAt(Math.PI/2,1.1),3],[POND.x,POND.z,POND.r+3],...CAMPS.map(c=>[c.x,c.z,5]),...PIERS.map(p=>[p.u.x*(p.s0-2),p.u.z*(p.s0-2),7])];
 function freeSpot(rmin,rmax,gap,minH){for(let n=0;n<400;n++){const a=srnd()*Math.PI*2,r=(rmin+srnd()*(rmax-rmin))*R,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(groundH(x,z)>(minH??.9)&&taken.every(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)>tr+gap)){taken.push([x,z,gap]);return{x,z}}}return{x:0,z:0}}
 
 const woodMat=M(0x7a5530);
 for(const P of PIERS){const pier=new THREE.Group();scene.add(pier);const {u,s0,len}=P;
+ if(P.stone){ // the ship's pier: stone blocks on stone pillars, curbs, mooring posts and street lamps
+   const g=new THREE.Group();g.position.set(u.x*s0,0,u.z*s0);g.rotation.y=-P.a;pier.add(g);const W=P.w,sA=M(0xa8a294),sB=M(0x948e82),dark=M(0x6d685f),iron=M(0x2b2a26);
+   for(let x=0;x<len;x+=2){const b=sh(new THREE.Mesh(new THREE.BoxGeometry(1.94,.7,W*2),(x/2)%2?sA:sB));b.position.set(x+1,.25,0);g.add(b);
+     for(const zz of [-W*.5,W*.5]){const seam=new THREE.Mesh(new THREE.BoxGeometry(1.9,.02,.04),dark);seam.position.set(x+1,.61,zz);g.add(seam)}}
+   for(let x=1;x<len;x+=3.8)for(const sd of [-1,1]){const c=sh(new THREE.Mesh(new THREE.CylinderGeometry(.5,.65,2.8,8),dark));c.position.set(x,-1.3,sd*(W-.35));g.add(c)}
+   for(const sd of [-1,1]){const c=sh(new THREE.Mesh(new THREE.BoxGeometry(len,.22,.3),dark));c.position.set(len/2,.71,sd*(W-.15));g.add(c)}
+   for(const x of [3.2,len/2,len-1.6])for(const sd of [-1,1]){const b=sh(new THREE.Mesh(new THREE.CylinderGeometry(.15,.2,.5,10),iron));b.position.set(x,.85,sd*(W-.42));g.add(b);
+     const top=new THREE.Mesh(new THREE.SphereGeometry(.2,10,6),iron);top.position.set(x,1.12,sd*(W-.42));top.scale.y=.5;g.add(top)}
+   for(const x of [1.2,len-.8])for(const sd of [-1,1]){const post=sh(new THREE.Mesh(new THREE.CylinderGeometry(.06,.09,2.6,8),iron));post.position.set(x,1.9,sd*(W-.25));g.add(post);
+     const lamp=new THREE.Mesh(new THREE.BoxGeometry(.3,.38,.3),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.set(x,3.3,sd*(W-.25));g.add(lamp);
+     const glow=new THREE.Mesh(new THREE.SphereGeometry(.7,10,6),new THREE.MeshBasicMaterial({color:0xffc870,transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending}));glow.position.copy(lamp.position);g.add(glow)}
+   continue}
  const deck=sh(new THREE.Mesh(new THREE.BoxGeometry(len,.18,PIER_W*2),M(0xa47b4a)));
  deck.position.set(u.x*(s0+len/2),.5,u.z*(s0+len/2));deck.rotation.y=-P.a;pier.add(deck);
  for(let s=0;s<=len;s+=3.5)for(const w of [-1,1]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,2.4,6),woodMat));
@@ -644,9 +660,9 @@ for(const C0 of CAMPS)for(let k=0;k<C0.seats;k++){const a=k/C0.seats*Math.PI*2+.
 /* camp fires: each is lit for everyone on the island while anyone's flame there is burning */
 if(!S.fires)S.fires={0:S.fireUntil||0};
 const remoteFires={};
-function fireLit(i){return Math.max(S.fires[i]||0,remoteFires[i]||0)>Date.now()}
+function fireLit(i){return !!CAMPS[i].always||Math.max(S.fires[i]||0,remoteFires[i]||0)>Date.now()}
 function anyFireLit(){return CAMPS.some((_,i)=>fireLit(i))}
-function fireNear(){return CAMPS.some((c,i)=>fireLit(i)&&Math.hypot(player.position.x-c.x,player.position.z-c.z)<4)}
+function fireNear(){return CAMPS.some((c,i)=>fireLit(i)&&Math.hypot(player.position.x-c.x,player.position.z-c.z)<4)||activeFires().some(f=>Math.hypot(player.position.x-f.x,player.position.z-f.z)<3)}
 function commonFish(){return ["anchovy","horse","mackerel","crucian","minnow"].find(id=>have(id)>0)}
 CAMPS.forEach((C0,i)=>{
   const g=new THREE.Group();g.position.set(C0.x,groundH(C0.x,C0.z),C0.z);scene.add(g);C0.g=g;
@@ -663,6 +679,68 @@ CAMPS.forEach((C0,i)=>{
     act:()=>{if(fireLit(i)){const f=commonFish();if(f){busy(2,"지글지글…",()=>{S.fish[f]--;log(`${itemName(f)} 구이 냠냠.`);showBubble(meTag,"😋",true)})}else startEmote("zone")}
       else busy(2.2,"나무 비비는 중…",()=>{S.inv.wood-=3;S.fires[i]=Date.now()+180000;S.lastFire=i;log("모닥불이 타닥타닥 붙었다.");beep(330,.3,"sawtooth",.08)})}});
 });
+// the big fire at the pit house is larger than the others
+CAMPS.forEach(C0=>{if(C0.always){C0.g.scale.setScalar(1.6);const c=colliders.find(o=>o.x===C0.x&&o.z===C0.z);if(c)c.r=1.4}});
+
+/* big pit house (움집): thatched cone roof on a ring of posts and wattle walls, open doorway to the east,
+   room inside for people to come and go; the roof fades while you are inside so the camera can see */
+const hutRoofMats=[];
+{const B=BIGHUT,y0=groundH(B.x,B.z),g=new THREE.Group();g.position.set(B.x,y0,B.z);scene.add(g);
+ const floor=sh(new THREE.Mesh(new THREE.CylinderGeometry(B.r+.2,B.r+.4,.5,32),M(0xc9a46a)));floor.position.y=-.22;g.add(floor);
+ const mat=new THREE.Mesh(new THREE.CircleGeometry(2.2,24),M(0xd8b878));mat.rotation.x=-Math.PI/2;mat.position.y=.05;g.add(mat);
+ const DOOR=.42,postM=M(0x7a5530),wallM=M(0xa98252);
+ for(let a=DOOR;a<=Math.PI*2-DOOR+.001;a+=(Math.PI*2-DOOR*2)/22){
+   const x=Math.cos(a)*B.r,z=Math.sin(a)*B.r,p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,3.4,6),postM));p.position.set(x,1.7,z);g.add(p);
+   colliders.push({x:B.x+x,z:B.z+z,r:.32})}
+ // wattle wall panels between the posts
+ for(let k=0;k<22;k++){const a0=DOOR+k*(Math.PI*2-DOOR*2)/22,a1=a0+(Math.PI*2-DOOR*2)/22,am=(a0+a1)/2,len=2*B.r*Math.sin((a1-a0)/2);
+   const w=sh(new THREE.Mesh(new THREE.BoxGeometry(len,2.1,.14),wallM));w.position.set(Math.cos(am)*(B.r-.02),1.15,Math.sin(am)*(B.r-.02));w.rotation.y=-am+Math.PI/2;g.add(w)}
+ // door frame
+ for(const s of [-1,1]){const p=sh(new THREE.Mesh(new THREE.CylinderGeometry(.24,.26,3.7,7),postM));p.position.set(Math.cos(DOOR*s)*B.r,1.85,Math.sin(DOOR*s)*B.r);g.add(p)}
+ const lintel=sh(new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,2.6,6),postM));lintel.rotation.x=Math.PI/2;lintel.position.set(B.r,3.6,0);g.add(lintel);
+ // thatched roof: two stacked cones and a smoke hole cap
+ const thatch=new THREE.MeshLambertMaterial({color:0xb48a4e,flatShading:true,transparent:true,opacity:1,side:THREE.DoubleSide});hutRoofMats.push(thatch);
+ const roof=sh(new THREE.Mesh(new THREE.ConeGeometry(B.r+1.3,5.2,26,3,true),thatch));roof.position.y=3.4+2.6;g.add(roof);
+ const roof2=sh(new THREE.Mesh(new THREE.ConeGeometry(B.r*.55,2.4,20,1,true),thatch));roof2.position.y=7.2;g.add(roof2);
+ const cap=new THREE.Mesh(new THREE.ConeGeometry(.5,.8,10),M(0x7a5530));cap.position.y=8.9;g.add(cap);
+ for(let k=0;k<26;k++){const a=k/26*Math.PI*2,t=new THREE.Mesh(new THREE.ConeGeometry(.22,.7,4),thatch);t.position.set(Math.cos(a)*(B.r+1.2),3.35,Math.sin(a)*(B.r+1.2));t.rotation.x=Math.PI;g.add(t)}
+ // inside: seats around a little hearth, a hanging lantern glow
+ const hearth=new THREE.Group();g.add(hearth);
+ for(let k=0;k<7;k++){const a=k/7*Math.PI*2,st=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.2,0),M(0x8d8a80)));st.position.set(Math.cos(a)*.55,.15,Math.sin(a)*.55);hearth.add(st)}
+ const ember=new THREE.Mesh(new THREE.SphereGeometry(.28,10,6),new THREE.MeshBasicMaterial({color:0xff7a2a}));ember.scale.y=.4;ember.position.y=.12;hearth.add(ember);
+ const lampGlow=new THREE.Mesh(new THREE.SphereGeometry(.9,12,8),new THREE.MeshBasicMaterial({color:0xffc870,transparent:true,opacity:.25,depthWrite:false,blending:THREE.AdditiveBlending}));lampGlow.position.y=4.0;g.add(lampGlow);
+ const lamp=new THREE.Mesh(new THREE.BoxGeometry(.3,.36,.3),new THREE.MeshBasicMaterial({color:0xffe08a}));lamp.position.y=4.0;g.add(lamp);
+ colliders.push({x:B.x,z:B.z,r:.7});
+ for(let k=0;k<4;k++){const a=Math.PI*.35+k*Math.PI*.43,x=B.x+Math.cos(a)*2.6,z=B.z+Math.sin(a)*2.6;makeLogSeat(x,z,Math.atan2(B.x-x,B.z-z))}
+ items.push({x:B.x+B.r,z:B.z,r:1.6,label:()=>({t:"🛖 움집",ok:false}),act:()=>{}});
+}
+function insideHut(){return Math.hypot(player.position.x-BIGHUT.x,player.position.z-BIGHUT.z)<BIGHUT.r+.3}
+/* light a fire anywhere (🔥 in the left menu): 3 wood + 1 shell, burns 3 minutes, friends see it too */
+const FIRE_MS=180000,FIRE_COST={wood:3,shell:1};
+function makeFireObj(x,z){const g=new THREE.Group();g.position.set(x,groundBase(x,z),z);scene.add(g);
+  for(let k=0;k<6;k++){const a=k/6*Math.PI*2,st=sh(new THREE.Mesh(new THREE.DodecahedronGeometry(.18,0),M(0x8d8a80)));st.position.set(Math.cos(a)*.55,.08,Math.sin(a)*.55);g.add(st)}
+  for(let k=0;k<3;k++){const l=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,.8,5),woodMat);l.rotation.z=Math.PI/2;l.rotation.y=k*1.05;l.position.y=.1;g.add(l)}
+  const f1=new THREE.Mesh(new THREE.ConeGeometry(.32,.9,6),new THREE.MeshBasicMaterial({color:0xf08a2c}));f1.position.y=.5;
+  const f2=new THREE.Mesh(new THREE.ConeGeometry(.18,.6,6),new THREE.MeshBasicMaterial({color:0xffd25a}));f2.position.y=.4;
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(1.3,12,8),new THREE.MeshBasicMaterial({color:0xff9a4a,transparent:true,opacity:.2,depthWrite:false,blending:THREE.AdditiveBlending}));glow.position.y=.6;
+  g.add(f1,f2,glow);return{g,f1,f2,glow}}
+const fireObjs=new Map();
+function activeFires(){const now=Date.now(),out=[];if(S.myFire&&S.myFire.until>now)out.push({key:"me",...S.myFire});
+  remotes.forEach((r,k)=>{if(r.pf&&r.pf.until>now)out.push({key:k,...r.pf})});return out}
+function lightFireHere(){
+  if(!started||busyS)return;
+  if(S.inv.wood<FIRE_COST.wood||S.inv.shell<FIRE_COST.shell){toast("나무 3개와 조개 1개가 필요합니다");return}
+  const ry=player.rotation.y,x=player.position.x+Math.sin(ry)*1.7,z=player.position.z+Math.cos(ry)*1.7;
+  if(groundH(x,z)<.15||inPond(x,z,.6)||onPier(x,z)||insideHut()){toast("여기선 불을 피울 수 없어요");return}
+  busy(1.6,"나무 비비는 중…",()=>{S.inv.wood-=3;S.inv.shell-=1;S.myFire={x:+x.toFixed(1),z:+z.toFixed(1),until:Date.now()+FIRE_MS};
+    log("🔥 모닥불을 피웠다. 3분 동안 타요.");beep(330,.3,"sawtooth",.08);save();renderInv()})}
+function fireItem(f){return{x:f.x,z:f.z,r:2.4,label:()=>commonFish()?{t:`${itemName(commonFish())} 구워 먹기`,ok:true}:{t:"모닥불 앞에서 멍때리기",ok:true},
+  act:()=>{const fi=commonFish();if(fi)busy(2,"지글지글…",()=>{S.fish[fi]--;log(`${itemName(fi)} 구이 냠냠.`);showBubble(meTag,"😋",true)});else startEmote("zone")}}}
+function updFires(t,night){const list=activeFires(),keys=new Set();
+  for(const f of list){const k=f.key+":"+f.x+","+f.z;keys.add(k);let o=fireObjs.get(k);if(!o){o=makeFireObj(f.x,f.z);fireObjs.set(k,o)}
+    const fl=1+Math.sin(t*17+f.x)*.12;o.f1.scale.set(fl,1+Math.sin(t*13+f.z)*.15,fl);o.f2.scale.set(fl,1+Math.cos(t*15+f.x)*.2,fl);o.glow.material.opacity=.15+night*.3}
+  for(const [k,o] of fireObjs)if(!keys.has(k)){scene.remove(o.g);fireObjs.delete(k)}}
+
 
 /* placeable items from the trading ship: traded items go to the inventory; you set them down and pick them up again.
    Everyone on the island sees what you placed (it travels in your presence), only you can pick it up. */
@@ -955,14 +1033,15 @@ function shipNow(){const now=Date.now()/1000,d=Math.floor(now/DAY_LEN),tt=(now%D
   if(!w||tt<w.a||tt>w.b)return{here:false,d};return{here:true,d,k:(tt-w.a)/(w.b-w.a),left:(w.b-tt)*DAY_LEN}}
 function nextShipText(){const now=Date.now()/1000,d0=Math.floor(now/DAY_LEN),tt=(now%DAY_LEN)/DAY_LEN;
   for(let d=d0;d<d0+6;d++){const w=shipWin(d);if(!w)continue;if(d===d0&&tt>w.a)continue;
-    const secs=((d-d0)+w.a-tt)*DAY_LEN,h=(6+w.a*24)%24;return`⛵ 다음 배: ${d===d0?"오늘":d===d0+1?"내일":`${d-d0}일 뒤`} ${fmtHour(h)} (${secs<90?Math.round(secs)+"초":Math.round(secs/60)+"분"} 뒤)`}
+    const secs=((d-d0)+w.a-tt)*DAY_LEN,h=hourAt(w.a);return`⛵ 다음 배: ${d===d0?"오늘":d===d0+1?"내일":`${d-d0}일 뒤`} ${fmtHour(h)} (${secs<90?Math.round(secs)+"초":Math.round(secs/60)+"분"} 뒤)`}
   return"⛵ 한동안 배가 안 온대"}
 function fmtHour(h){const hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;return`${hh<12?"오전":"오후"} ${((hh+11)%12)+1}:${String(mm).padStart(2,"0")}`}
 function offersFor(d){let s=hash(d*13+5)||1;const r=()=>{s=Math.imul(s,1103515245)+12345>>>0;return s/4294967296};
   const idx=POOL.map((_,i)=>i).sort(()=>r()-.5);
   return idx.filter(i=>{const g=POOL[i].get;return !(g.decor&&(g.decor==="ukulele"?S.decor.ukulele:ownsKind(g.decor)))&&!(g.hat!=null&&S.hats.includes(g.hat))&&!(g.rod&&S.rod)}).slice(0,4)}
 let shipWas=false;
-const DOCK={x:PU.x*(PIER_S0+PIER_LEN+3),z:PU.z*(PIER_S0+PIER_LEN+3)};
+const DOCK={x:PU.x*(PIER_S0+PIER_LEN-5),z:PU.z*(PIER_S0+PIER_LEN-5)},SHIP_SCALE=1.7,SHIP_SIDE=PIERS[0].w+2*SHIP_SCALE+.6; // ship lies alongside the stone pier
+ship.scale.setScalar(SHIP_SCALE);
 items.push({get x(){return PIER_END.x},get z(){return PIER_END.z},r:3,label:()=>shipNow().here?{t:"선장과 물물교환",ok:true}:null,act:()=>openTrade()});
 
 /* ---------- controls ---------- */
@@ -1022,7 +1101,9 @@ function openGuide(stay){
     <li>🪵 나뭇가지 · 🌿 야자잎 · 🥥 코코넛 · 🐚 조개는 가까이 가면 나오는 버튼으로 주워요. 시간이 지나면 다시 생겨요.</li>
     <li>🎣 <b>낚시</b>는 🔁 교환소에서 낚싯대(나무 5 + 조개 3)를 만들어야 할 수 있어요. 바다·선착장·연못에서 찌를 던지고, ❗ 입질이 오면 바로 당겨요.</li>
     <li>🐟 바다와 🪷 연못은 사는 물고기가 달라요. 🌙 밤에만 나오는 물고기, ✨ 전설의 물고기도 있어요.</li>
-    <li>🔥 모닥불은 나무 3개로 피워요. 불 옆에서 생선을 구워 먹을 수 있어요.</li>
+    <li>🔥 정해진 모닥불 자리는 나무 3개로 피워요. 왼쪽 메뉴의 🔥 버튼을 누르면 나무 3개 + 조개 1개로 <b>아무 데서나</b> 불을 피울 수 있어요. 불 옆에서 생선을 구워 먹어요.</li>
+    <li>🛖 연못 동쪽의 <b>움집</b>은 누구나 드나들 수 있어요. 문 앞 큰 캠프파이어는 꺼지지 않아요.</li>
+    <li>🌇 석양은 천천히 지고, 밤은 낮보다 빨리 지나가요.</li>
     <li>👕 처음엔 <b>원시인</b> 옷뿐이에요. 다른 옷·헤어·수염은 🔁 교환소에서 열어요. 원시인 🪨 거미 히어로 🕸️ 양복 🔫 은 특별 기술이 있어요.</li>
     <li>⛵ <b>갈매기호</b>는 가끔 와요. 선착장에서 선장과 물물교환하면 모자·해먹 같은 꾸미기가 생겨요.</li>
     <li>📦 꾸미기는 가방 → 인벤토리에서 설치하고 수거해요. 내가 놓은 물건은 모두에게 보여요.</li>
@@ -1109,9 +1190,9 @@ function startEmote(id){if(!started||busyS)return;if(fishS)stopFishing("");
   if(id==="wave"&&Math.hypot(C.x-player.position.x,C.z-player.position.z)<6){C.wait=2;setTimeout(()=>toast("꽃게 씨가 집게를 흔들어 줬다!"),600)}}
 function renderEmotes(){
   $("emotes").innerHTML=emoteList().map((e,i)=>`<button class="emo" data-emo="${e.id}"><span>${e.icon}</span><small>${e.name}${touch?"":` <kbd>${i+4}</kbd>`}</small></button>`).join("")+
-    `<button class="emo" id="chatBtn"><span>💬</span><small>말하기${touch?"":" <kbd>Enter</kbd>"}</small></button>`;
+    `<button class="emo" id="fireBtn"><span>🔥</span><small>불 피우기</small></button><button class="emo" id="chatBtn"><span>💬</span><small>말하기${touch?"":" <kbd>Enter</kbd>"}</small></button>`;
   $("emotes").querySelectorAll("[data-emo]").forEach(b=>b.onclick=()=>startEmote(b.dataset.emo));
-  $("chatBtn").onclick=()=>openChat();
+  $("chatBtn").onclick=()=>openChat();$("fireBtn").onclick=()=>lightFireHere();
 }
 renderEmotes();
 
@@ -1296,6 +1377,7 @@ function upRemote(p){
     if(pr.s&&!first){const d=Math.hypot(r.tx-player.position.x,r.tz-player.position.z),txt=String(pr.s).slice(0,40);
       if(d<HEAR){showBubble(r.tag,txt,false);r.tag.bub.style.opacity=String(Math.max(.35,1-d/HEAR));speak(txt,d,r.tag.n.textContent)}}}
   r.fire=Math.min(num(pr.f,0,1e15),Date.now()+600000);r.fi=Math.abs(num(pr.fi,0,99)|0)%CAMPS.length;
+  r.pf=Array.isArray(pr.pf)?{x:num(pr.pf[0],0,200),z:num(pr.pf[1],0,200),until:Math.min(num(pr.pf[2],0,1e15),Date.now()+FIRE_MS+5000)}:null;
   // what this friend has set down on the island
   const pk=JSON.stringify(pr.pl||[]);
   if(pk!==r.plKey){r.plKey=pk;(r.decor||[]).forEach(d=>scene.remove(d.g));r.decor=[];
@@ -1342,7 +1424,7 @@ function sendPresence(){
   if(!chan||!online())return;
   const P={n:S.nick,c:S.shirt,h:S.hat,hr:S.hair,bd:S.beard,x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),r:+player.rotation.y.toFixed(2),
     a:fishS?(fishS.phase==="bite"?"bite":"fish"):busyS?"busy":"",e:emo?emo.id:null,et:emo?emo.stamp||0:0,s:say.s,st:say.st,f:S.fires[S.lastFire|0]||0,fi:S.lastFire|0,
-    j:+liftY.toFixed(2),pl:S.placed.map(p=>[p.k,+(+p.x).toFixed(1),+(+p.z).toFixed(1),+(+p.ry).toFixed(2)])};
+    j:+liftY.toFixed(2),pf:S.myFire&&S.myFire.until>Date.now()?[S.myFire.x,S.myFire.z,S.myFire.until]:null,pl:S.placed.map(p=>[p.k,+(+p.x).toFixed(1),+(+p.z).toFixed(1),+(+p.ry).toFixed(2)])};
   if(fishS){P.bx=+fishS.bx.toFixed(2);P.bz=+fishS.bz.toFixed(2)}
   const k=JSON.stringify(P);if(k===sentKey)return;sentKey=k;ws.send(JSON.stringify({t:"p",p:P}));
 }
@@ -1359,8 +1441,12 @@ let started=false;
 
 /* ---------- loop ---------- */
 let W_NOW={w:0,cloud:0,rain:0};const nightShow={aurora:-1,meteor:-1};
-function timeNow(){return (Date.now()/1000%DAY_LEN)/DAY_LEN}
-function hourNow(){return (6+timeNow()*24)%24}
+// game clock: real time flows unevenly so sunsets linger (x0.7) and nights pass faster (x1.45)
+const TIME_SEGS=[[6,17,1],[17,19.6,.7],[19.6,29,1.45],[29,30,1]];
+const TIME_U=TIME_SEGS.reduce((a,[h0,h1,r])=>a+(h1-h0)/r,0);
+function hourAt(raw){let u=raw*TIME_U;for(const [h0,h1,r] of TIME_SEGS){const len=(h1-h0)/r;if(u<=len)return (h0+u*r)%24;u-=len}return 6}
+function hourNow(){return hourAt((Date.now()/1000%DAY_LEN)/DAY_LEN)}
+function timeNow(){return ((hourNow()-6+24)%24)/24}
 let last=performance.now(),saveT=0,mapT=1,clockKey="";
 function update(dt,t){
   const playing=started&&$("dex").hidden&&$("trade").hidden&&$("servers").hidden&&$("costume").hidden&&$("invWin").hidden&&$("guideWin").hidden;
@@ -1462,7 +1548,7 @@ function update(dt,t){
     const hx=m.p.x+m.v.x*m.t,hy=m.p.y+m.v.y*m.t,hz=m.p.z+m.v.z*m.t,tl=Math.min(1,k*3)*.13;
     pa.setXYZ(0,hx,hy,hz);pa.setXYZ(1,hx-m.v.x*tl,hy-m.v.y*tl,hz-m.v.z*tl);pa.needsUpdate=true;m.l.material.opacity=Math.sin(k*Math.PI)}
   // clouds drift around the island; more of them as the weather turns
-  cloudMat.color.setHex(0xffffff).lerp(skyU.hor.value,.35).multiplyScalar(1-night*.72-rn*.25);
+  cloudMat.color.setHex(0xffffff).lerp(skyU.hor.value,.3+glow*.4).multiplyScalar(1-night*.72-rn*.25);
   for(const c of clouds){const u=c.userData;u.a+=u.sp*dt;c.position.set(Math.cos(u.a)*u.r,u.y,Math.sin(u.a)*u.r);c.visible=u.need<cl}
   cloudMat.opacity=.55+cl*.35;
   // rain falls around the camera
@@ -1481,7 +1567,8 @@ function update(dt,t){
     if(lit){const fl=1+Math.sin(t*17+ci)*.12;C0.f1.scale.set(fl,1+Math.sin(t*13+ci)*.15,fl);C0.f2.scale.set(fl,1+Math.cos(t*15+ci)*.2,fl);C0.light.intensity=1.6+Math.sin(t*20+ci)*.3+night*1.5;
       C0.smoke.forEach((s,i)=>{const k=((t*.35+i/4)%1);s.position.set(Math.sin(k*6+i)*.4,1+k*7,Math.cos(k*5)*.3);s.scale.setScalar(.6+k*2.2);s.material.opacity=.5*(1-k)})}
     else C0.light.intensity=0});
-  animDecor(t,night);
+  animDecor(t,night);updFires(t,night);
+  { const inH=insideHut(); for(const m of hutRoofMats){m.opacity+=((inH?.18:1)-m.opacity)*Math.min(1,dt*6);m.depthWrite=m.opacity>.95} }
   /* crab */
   if(C.wait>0)C.wait-=dt;else{const dx=C.tx-C.x,dz=C.tz-C.z,d=Math.hypot(dx,dz);
     if(d<.3){const cur=Math.atan2(C.z,C.x),an=cur+(Math.random()-.5)*.5,rr=rAt(an,.6)-Math.random()*4;C.tx=Math.cos(an)*rr;C.tz=Math.sin(an)*rr;C.wait=1+Math.random()*3}
@@ -1492,7 +1579,7 @@ function update(dt,t){
   const sn=shipNow();
   if(sn.here){ship.visible=true;
     const away=(1-Math.min(1,sn.k/.12))+Math.max(0,(sn.k-.88)/.12);
-    ship.position.set(DOCK.x+PU.x*away*90-PU.z*4,Math.sin(t*.8)*.15-.2,DOCK.z+PU.z*away*90+PU.x*4);ship.rotation.y=-PIER_A;
+    ship.position.set(DOCK.x+PU.x*away*90-PU.z*SHIP_SIDE,Math.sin(t*.8)*.15-.2,DOCK.z+PU.z*away*90+PU.x*SHIP_SIDE);ship.rotation.y=-PIER_A;
     const docked=away<.02;captain.g.visible=docked;
     if(docked){captain.g.position.set(PIER_END.x+PU.x*.8,.6,PIER_END.z+PU.z*.8);captain.g.rotation.y=Math.atan2(player.position.x-captain.g.position.x,player.position.z-captain.g.position.z);
       animChibi(captain,{moving:false,speed:0,emo:{id:"wave",t:t%2.2}},dt,t)}
@@ -1501,7 +1588,7 @@ function update(dt,t){
   /* interaction prompt */
   current=null;
   if(playing&&!busyS&&!fishS){let bd=1e9;
-    for(const it of [...items,...decorSpots().map(spotItem)]){const d=Math.hypot(it.x-player.position.x,it.z-player.position.z);if(d<it.r&&d<bd){const l=it.label();if(l){current={it,l};bd=d}}}
+    for(const it of [...items,...decorSpots().map(spotItem),...activeFires().map(fireItem)]){const d=Math.hypot(it.x-player.position.x,it.z-player.position.z);if(d<it.r&&d<bd){const l=it.label();if(l){current={it,l};bd=d}}}
     if(!current&&nearWater())current={it:fishItem,l:S.unlock.rod?{t:"낚시하기",ok:true}:{t:"낚싯대가 필요해요 · 📖 교환소",ok:false}}}
   const pr=$("prompt");
   if(typing()||!$("chatForm").hidden)pr.hidden=true;
