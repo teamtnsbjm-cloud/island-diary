@@ -164,9 +164,9 @@ function livePlayers() {
   for (const ws of wss.clients) { const c = ws.cl; if (c && c.browser && c.island && c.p && ws.readyState === 1) n++; }
   return n;
 }
-// 공간 키가 있으면 10분마다 숫자만 보내요 (Render 환경변수 METAMOA_KEY, METAMOA_SPACE_ID)
+// 공간 키가 있으면 10분마다 숫자만 보내요 (Render 환경변수 METAMOA_KEY만 넣으면 돼요)
 async function pushLive() {
-  const key = process.env.METAMOA_KEY, space = process.env.METAMOA_SPACE_ID;
+  const key = process.env.METAMOA_KEY, space = process.env.METAMOA_SPACE_ID || "island-diary-onrender-com-mwa9rq9h";
   if (!key || !space) return;
   try {
     const r = await fetch(`https://metamoa.com/api/live/${encodeURIComponent(space)}`, {
