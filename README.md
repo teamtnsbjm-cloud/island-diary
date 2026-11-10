@@ -70,3 +70,14 @@ Render의 **Environment**에서 바꿀 수 있어요.
 
 - `/health`: 서버가 살아 있으면 `ok`
 - `/api/islands`: 섬별 현재 인원 (JSON)
+
+## 메타모아 연결 (접속자 수)
+
+- **접속자 수 주소**: `https://island-diary.onrender.com/api/live` → 지금 섬에 함께 있는 사람 수를 숫자 하나로 돌려줘요.
+  브라우저로 들어와 섬에 입장한 사람만 세고, 스크립트·봇 접속은 빼요. 이용자 정보는 들어 있지 않아요.
+  메타모아 등록 신청의 「접속자 수 API」(live_api) 칸에 이 주소를 넣으면 돼요.
+- **10분마다 보내기**: Render → Environment에 아래 두 값을 넣으면 서버가 10분마다 숫자만 보내요. 값이 없으면 보내지 않아요.
+  - `METAMOA_KEY`: https://metamoa.com/owner 에서 소유자 확인 후 받은 공간 키
+  - `METAMOA_SPACE_ID`: 메타모아 공간 id
+- **알림(웹훅) 받는 곳**: `https://island-diary.onrender.com/api/metamoa-hook` (POST, 내용은 서버 로그에 남아요).
+  `METAMOA_HOOK_TOKEN`을 정해 두면 `?token=그값`이 붙은 요청만 받아요.

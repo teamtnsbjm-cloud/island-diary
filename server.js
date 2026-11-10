@@ -20,6 +20,20 @@ const TYPES = {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (url.pathname === "/health") { res.end("ok"); return; }
+  // 메타모아용: 지금 섬에 함께 있는 사람 수를 숫자 하나로 (봇·테스트 접속 제외, 이용자 정보 없음)
+  if (url.pathname === "/api/live") {
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" });
+    res.end(String(livePlayers()));
+    return;
+  }
+  // 메타모아 알림(웹훅) 받는 곳: 내용은 서버 기록에만 남겨요
+  if (url.pathname === "/api/metamoa-hook" && req.method === "POST") {
+    if (process.env.METAMOA_HOOK_TOKEN && url.searchParams.get("token") !== process.env.METAMOA_HOOK_TOKEN) { res.writeHead(403); res.end(); return; }
+    let body = "";
+    req.on("data", (c) => { body += c; if (body.length > 10000) req.destroy(); });
+    req.on("end", () => { console.log("[메타모아 알림]", body.slice(0, 500)); res.writeHead(200); res.end("ok"); });
+    return;
+  }
   if (url.pathname === "/api/islands") {
     res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
     res.end(JSON.stringify({ cap: CAP, islands: counts(), total: wss.clients.size }));
@@ -88,8 +102,11 @@ function leave(cl) {
   cl.island = 0; countsDirty = true;
 }
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
   const cl = { id: (nextId++).toString(36), ws, island: 0, p: null, tokens: 30, last: Date.now(), alive: true };
+  // 브라우저에서 이 게임 페이지로 들어온 접속만 사람으로 셈 (스크립트·봇은 Origin이 없거나 다름)
+  const origin = req.headers.origin || "";
+  try { cl.browser = !!origin && new URL(origin).host === req.headers.host; } catch { cl.browser = false; }
   ws.cl = cl;
   ws.on("pong", () => { cl.alive = true; });
   send(ws, { t: "counts", c: counts(), cap: CAP });
@@ -139,6 +156,28 @@ setInterval(() => {
     ws.cl.alive = false; ws.ping();
   }
 }, 30000);
+
+/* ---------- 메타모아 접속자 수 ---------- */
+// 사람 = 브라우저로 들어와서, 시작 화면을 지나 섬에 들어가 움직임 정보를 보낸 접속
+function livePlayers() {
+  let n = 0;
+  for (const ws of wss.clients) { const c = ws.cl; if (c && c.browser && c.island && c.p && ws.readyState === 1) n++; }
+  return n;
+}
+// 공간 키가 있으면 10분마다 숫자만 보내요 (Render 환경변수 METAMOA_KEY, METAMOA_SPACE_ID)
+async function pushLive() {
+  const key = process.env.METAMOA_KEY, space = process.env.METAMOA_SPACE_ID;
+  if (!key || !space) return;
+  try {
+    const r = await fetch(`https://metamoa.com/api/live/${encodeURIComponent(space)}`, {
+      method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ count: livePlayers() }),
+    });
+    console.log(`[메타모아] 접속자 수 보냄: ${r.status}`);
+  } catch (e) { console.log("[메타모아] 보내기 실패:", e.message); }
+}
+setTimeout(pushLive, 30 * 1000);
+setInterval(pushLive, 10 * 60 * 1000);
 
 server.listen(PORT, () => {
   console.log(`🏝️  무인도 일기 서버가 열렸어요: http://localhost:${PORT}`);
